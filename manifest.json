@@ -81,6 +81,9 @@
         "router" : {
             "mode" : "hash",
             "base" : "/admin/"
+        },
+        "devServer" : {
+            "port" : 5678
         }
     },
     "vueVersion" : "3",
