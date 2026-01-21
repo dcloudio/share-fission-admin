@@ -55,6 +55,11 @@ export default {
 				text: '表格',
 				icon: 'admin-icons-table',
 				value: '/pages/demo/table/table',
+			}, {
+				menu_id: "table",
+				text: '虚拟表格',
+				icon: 'admin-icons-table',
+				value: '/pages/demo/virtual-table/virtual-table',
 			}]
 		}, {
 			menu_id: "admim-doc-pulgin",
@@ -80,6 +85,6 @@ export default {
 		}]
 	},
 	uniStat: {
-		
+
 	}
 }

@@ -15,7 +15,7 @@
     "管理后台",
     "云后台",
     "uni-admin"
-],
+  ],
   "engines": {
     "HBuilderX": "^3.6.0",
     "uni-app": "^4.36",
@@ -114,5 +114,9 @@
         }
       }
     }
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "element-plus": "^2.13.1"
   }
 }

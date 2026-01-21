@@ -27,6 +27,14 @@ app.$mount()
 // #ifdef VUE3
 import { createSSRApp } from 'vue'
 import { createI18n } from 'vue-i18n'
+
+// #ifdef H5
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+// #endif
+
 export function createApp() {
   const app = createSSRApp(App)
   const i18n = createI18n({
@@ -36,6 +44,14 @@ export function createApp() {
   app.use(i18n)
   app.use(plugin)
   app.use(store)
+
+  // #ifdef H5
+  app.use(ElementPlus, { locale: zhCn })
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+  }
+  // #endif
+
   return {
     app
   }
