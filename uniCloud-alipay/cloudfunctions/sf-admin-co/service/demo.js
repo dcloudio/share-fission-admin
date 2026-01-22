@@ -44,11 +44,8 @@ module.exports = {
    * 新增记录
    */
   async add(data = {}) {
-    const now = Date.now();
-    const record = {
-      ...data,
-      create_time: now,
-    };
+    const { _id, create_time, update_time, ...record } = data;
+    record.create_time = Date.now();
     const { id } = await collection.add(record);
     return { id };
   },
@@ -57,8 +54,9 @@ module.exports = {
    * 更新记录
    */
   async update(_id, data = {}) {
+    const { _id: __, create_time, ...rest } = data;
     const updateData = {
-      ...data,
+      ...rest,
       update_time: Date.now()
     };
     const { updated } = await collection.doc(_id).update(updateData);

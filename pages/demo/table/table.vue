@@ -301,8 +301,9 @@ const loadData = async () => {
     tableData.total = res.total || 0
   } catch (e) {
     ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
 const formatNumber = (num) => (num == null ? '-' : num.toLocaleString())
@@ -370,7 +371,7 @@ const handleAdd = () => {
 // 编辑
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  Object.assign(formData, row)
+  Object.assign(formData, JSON.parse(JSON.stringify(row)))
   dialogVisible.value = true
 }
 
