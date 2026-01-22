@@ -16,12 +16,6 @@
 			}
 		},
 		{
-			"path": "pages/demo/virtual-table/virtual-table",
-			"style": {
-				"navigationBarTitleText": "虚拟表格"
-			}
-		},
-		{
 			"path": "uni_modules/uni-id-pages/pages/login/login-withpwd",
 			"style": {
 				"topWindow": false,
