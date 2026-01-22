@@ -2,7 +2,7 @@
  * 定义表格列配置
  */
 export const columns = [
-  { key: 'id', dataKey: 'id', title: 'ID', width: 80 },
+  { key: '_id', dataKey: '_id', title: 'ID', width: 220 },
   { key: 'name', dataKey: 'name', title: '姓名', width: 120 },
   { key: 'age', dataKey: 'age', title: '年龄', width: 80, align: 'center' },
   { key: 'department', dataKey: 'department', title: '部门', width: 120 },

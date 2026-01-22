@@ -1,5 +1,5 @@
 action({
-  name: "test.getList",
+  name: "demo.getList",
   data: {
     a: 1
   }
