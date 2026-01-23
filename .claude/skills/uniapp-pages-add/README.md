@@ -1,0 +1,170 @@
+# uni-app 新增页面技能
+
+## 触发条件
+- 用户请求创建新页面
+- 用户请求添加页面路由
+
+## 新增页面步骤
+
+### 1. 创建页面文件
+**路径规范**: `pages/模块名/页面名.vue`
+
+```
+pages/
+├── user/           # 用户模块
+│   ├── list.vue    # 列表页
+│   ├── add.vue     # 新增页
+│   └── edit.vue    # 编辑页
+├── order/          # 订单模块
+│   ├── list.vue
+│   └── detail.vue
+└── demo/           # 示例模块
+    └── table/
+        └── table.vue
+```
+
+### 2. 注册页面路由
+在 `pages.json` 的 `pages` 数组中添加:
+
+```json
+{
+  "path": "pages/模块名/页面名",
+  "style": {
+    "navigationBarTitleText": "页面标题"
+  }
+}
+```
+
+**完整示例**:
+```json
+{
+  "pages": [
+    {
+      "path": "pages/index/index"
+    },
+    {
+      "path": "pages/user/list",
+      "style": {
+        "navigationBarTitleText": "用户列表"
+      }
+    },
+    {
+      "path": "pages/user/add",
+      "style": {
+        "navigationBarTitleText": "新增用户"
+      }
+    }
+  ]
+}
+```
+
+### 3. Vue3 组合式页面模板
+
+```vue
+<template>
+  <view class="fix-top-window">
+    <view class="uni-header">
+      <uni-stat-breadcrumb class="uni-stat-breadcrumb-on-phone" />
+      <view class="uni-group">
+        <!-- 操作按钮区 -->
+      </view>
+    </view>
+    <view class="uni-container">
+      <!-- 页面主体内容 -->
+    </view>
+  </view>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+
+// ========== 状态定义 ==========
+const loading = ref(false)
+const formData = reactive({
+  // 表单字段
+})
+
+// ========== 计算属性 ==========
+const computedValue = computed(() => {
+  // 计算逻辑
+})
+
+// ========== 方法定义 ==========
+const loadData = async () => {
+  loading.value = true
+  try {
+    // 加载数据
+  } catch (e) {
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ========== 生命周期 ==========
+onMounted(() => {
+  loadData()
+})
+</script>
+
+<style scoped>
+/* 页面样式 */
+</style>
+```
+
+## 页面跳转
+
+### 保留当前页面，跳转到新页面
+```javascript
+uni.navigateTo({
+  url: '/pages/user/detail?id=123'
+})
+```
+
+### 关闭当前页面，跳转到新页面
+```javascript
+uni.redirectTo({
+  url: '/pages/user/list'
+})
+```
+
+### 关闭所有页面，打开新页面
+```javascript
+uni.reLaunch({
+  url: '/pages/index/index'
+})
+```
+
+### 返回上一页
+```javascript
+uni.navigateBack({
+  delta: 1
+})
+```
+
+## 获取页面参数
+
+```javascript
+import { onLoad } from '@dcloudio/uni-app'
+
+onLoad((options) => {
+  const { id } = options
+  console.log('页面参数:', id)
+})
+```
+
+## 常用页面布局类
+
+| 类名 | 说明 |
+|------|------|
+| `fix-top-window` | 固定顶部窗口 |
+| `uni-header` | 页面头部区域 |
+| `uni-container` | 页面内容容器 |
+| `uni-group` | 按钮组容器 |
+
+## 注意事项
+- 页面路径不带 `.vue` 后缀
+- 首页必须放在 `pages` 数组第一位
+- 使用 Vue3 Composition API + `<script setup>` 语法
+- 页面文件使用小写 + 连字符命名
