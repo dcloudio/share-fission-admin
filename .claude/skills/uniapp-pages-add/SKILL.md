@@ -18,12 +18,14 @@ pages/
 ├── order/          # 订单模块
 │   ├── list.vue
 │   └── detail.vue
-└── demo/           # 示例模块
-    └── table/
-        └── table.vue
+└── sf-admin/       # 管理员专有模块
+    └── config/
+        └── list.vue
 ```
 
 ### 2. 注册页面路由
+
+#### 方式 A: 注册到主包 (Main Package)
 在 `pages.json` 的 `pages` 数组中添加:
 
 ```json
@@ -35,28 +37,30 @@ pages/
 }
 ```
 
-**完整示例**:
+#### 方式 B: 注册到分包 (SubPackages) - 推荐
+如果页面属于独立模块，建议使用分包。在 `pages.json` 的 `subPackages` 数组中添加或修改:
+
 ```json
-{
-  "pages": [
-    {
-      "path": "pages/index/index"
-    },
-    {
-      "path": "pages/user/list",
-      "style": {
-        "navigationBarTitleText": "用户列表"
+"subPackages": [
+  {
+    "root": "pages/sf-admin",  // 分包根目录
+    "pages": [
+      {
+        "path": "config/list",  // 相对路径 (最终为 pages/sf-admin/config/list)
+        "style": {
+          "navigationBarTitleText": "系统配置"
+        }
       }
-    },
-    {
-      "path": "pages/user/add",
-      "style": {
-        "navigationBarTitleText": "新增用户"
-      }
-    }
-  ]
-}
+    ]
+  }
+]
 ```
+
+**分包注意事项:**
+1. `root` 指定分包根目录。
+2. `pages` 数组中的 `path` 是相对于 `root` 的路径，**不要重复写根目录**。
+   - 正确: `"path": "config/list"` (root="pages/sf-admin")
+   - 错误: `"path": "pages/sf-admin/config/list"`
 
 ### 3. Vue3 组合式页面模板
 
@@ -168,3 +172,4 @@ onLoad((options) => {
 - 首页必须放在 `pages` 数组第一位
 - 使用 Vue3 Composition API + `<script setup>` 语法
 - 页面文件使用小写 + 连字符命名
+- **避免重复注册**: 确保同一个页面路径只出现一次 (不要同时在 `pages` 和 `subPackages` 中注册，也不要在多个分包中注册同一个文件)
