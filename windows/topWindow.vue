@@ -32,7 +32,7 @@
 				<!-- #endif -->
 
 				<!-- 主题选择器 -->
-				<view class="navbar-right-item-gap" style="position: relative;" :class="{'popup-menu': themeMenuOpened}">
+			<!-- 	<view class="navbar-right-item-gap" style="position: relative;" :class="{'popup-menu': themeMenuOpened}">
 					<view class="theme-selector" @click="toggleThemeMenu">
 						<uni-icons type="color-filled" size="24" color="#999" />
 						<uni-icons class="arrowdown" type="arrowdown" color="#666" size="13"></uni-icons>
@@ -47,10 +47,10 @@
 						</view>
 						<view class="popup-menu__arrow"></view>
 					</view>
-				</view>
+				</view> -->
 
 				<!-- 语言选择器 -->
-				<view class="navbar-right-item-gap" style="position: relative;" :class="{'popup-menu': langMenuOpened}">
+				<!-- <view class="navbar-right-item-gap" style="position: relative;" :class="{'popup-menu': langMenuOpened}">
 					<view class="lang-selector" @click="toggleLangMenu">
 						<view class="admin-icons-lang" />
 						<uni-icons class="arrowdown" type="arrowdown" color="#666" size="13"></uni-icons>
@@ -66,7 +66,7 @@
 						<view class="popup-menu__arrow"></view>
 					</view>
 				</view>
-
+ -->
 				<view class="" style="position: relative;">
 					<view v-show="userInfo.nickname || userInfo.username || userInfo.mobile || userInfo.email" class="navbar-user" @click="togglePopupMenu">
 						<view class="admin-icons-user user-icon" />

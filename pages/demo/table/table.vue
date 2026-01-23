@@ -35,7 +35,7 @@
 
     <!-- 表格区域 -->
     <view class="table-container" ref="tableContainer">
-      <div class="virtual-table-wrapper" v-loading="loading">
+      <div class="virtual-table-wrapper pc-only" v-loading="loading">
         <el-auto-resizer>
           <template #default="{ height, width }">
             <el-table-v2
@@ -88,6 +88,50 @@
             </el-table-v2>
           </template>
         </el-auto-resizer>
+      </div>
+
+      <!-- 移动端列表视图 -->
+      <div class="mobile-list-container mobile-only" v-loading="loading">
+        <template v-if="tableData.list.length > 0">
+          <view class="mobile-card" v-for="(item, index) in tableData.list" :key="item._id">
+            <view class="card-header">
+              <view class="header-main">
+                <text class="card-title">{{ item.name }}</text>
+                <el-tag size="small" :type="getStatusType(item.status)">{{ item.status }}</el-tag>
+              </view>
+              <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
+            </view>
+
+            <view class="card-body">
+              <view class="info-row">
+                <text class="label">部门</text>
+                <text class="value">{{ item.department }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">薪资</text>
+                <text class="value price">¥ {{ formatNumber(item.salary) }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">电话</text>
+                <text class="value">{{ item.phone || '-' }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">入职</text>
+                <text class="value">{{ item.joinDate || '-' }}</text>
+              </view>
+            </view>
+
+            <view class="card-footer">
+              <el-button type="primary" link size="small" @click="handleEdit(item)">
+                <el-icon><Edit /></el-icon> 编辑
+              </el-button>
+              <el-button type="danger" link size="small" @click="handleDelete([item])">
+                <el-icon><Delete /></el-icon> 删除
+              </el-button>
+            </view>
+          </view>
+        </template>
+        <el-empty v-else description="暂无数据" />
       </div>
     </view>
 
@@ -199,7 +243,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -567,21 +611,153 @@ page {
   }
 }
 
+/* Responsive visibility */
+.mobile-only {
+  display: none;
+}
+
 @media screen and (max-width: 768px) {
-  .page-container {
-    padding: 12px;
+  .pc-only {
+    display: none !important;
   }
 
-  .toolbar,
-  .table-footer {
+  .mobile-only {
+    display: block;
+  }
+
+  .page-container {
+    padding: 12px;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .page-header {
+    padding: 16px;
+    margin-bottom: 12px;
+
+    .header-title-area {
+      .page-title {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .toolbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    padding: 12px;
+    gap: 12px;
 
     .toolbar-left,
-    .toolbar-right,
-    .footer-left,
+    .toolbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .el-input {
+      width: 100% !important;
+    }
+  }
+
+  .table-container {
+    background: transparent;
+    border-radius: 0;
+
+    .mobile-list-container {
+      height: 100%;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+
+    .mobile-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f2f5;
+
+        .header-main {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+          }
+        }
+
+        .card-index {
+          font-size: 12px;
+          color: #909399;
+        }
+      }
+
+      .card-body {
+        margin-bottom: 12px;
+
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          margin-bottom: 8px;
+
+          .label {
+            color: #909399;
+          }
+          .value {
+            color: #606266;
+            &.price {
+              color: #f56c6c;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
+      .card-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        border-top: 1px solid #f0f2f5;
+        padding-top: 12px;
+      }
+    }
+  }
+
+  .table-footer {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+
+    .footer-left {
+      display: none;
+    }
+
     .footer-right {
       width: 100%;
+      justify-content: center;
+
+      :deep(.el-pagination) {
+        flex-wrap: wrap;
+        justify-content: center;
+
+        /* Mobile: show only total, prev, next */
+        .el-pagination__sizes,
+        .el-pager,
+        .el-pagination__jump {
+          display: none !important;
+        }
+      }
     }
   }
 }

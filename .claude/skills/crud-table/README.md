@@ -139,8 +139,46 @@ export const columns = [
 ]
 ```
 
+### 8. 移动端适配
+使用 `@media` 查询和 CSS 类来区分 PC 端表格和移动端卡片列表。
+
+```css
+/* 响应式样式 */
+.mobile-only { display: none; }
+
+@media screen and (max-width: 768px) {
+  .pc-only { display: none !important; }
+  .mobile-only { display: block; }
+
+  /* 分页简化：只显示 total, prev, next */
+  :deep(.el-pagination) {
+    .el-pagination__sizes,
+    .el-pager,
+    .el-pagination__jump {
+      display: none !important;
+    }
+  }
+}
+```
+
+**结构示例：**
+```vue
+<!-- PC 表格 -->
+<div class="virtual-table-wrapper pc-only">
+  <el-table-v2 ... />
+</div>
+
+<!-- 移动端列表 -->
+<div class="mobile-list-container mobile-only">
+  <view class="mobile-card" v-for="item in list" ...>
+    <!-- 卡片内容 -->
+  </view>
+</div>
+```
+
 ## 注意事项
 - 使用 `_id` 而非 `id` (MongoDB 文档ID)
 - 编辑前必须深拷贝，防止修改影响表格显示
 - 所有异步操作使用 `try/catch/finally` 管理 loading
 - 弹窗只在操作成功时关闭，失败时保持打开状态
+- 移动端适配不应影响 PC 端样式，使用 `.pc-only` 和 `.mobile-only` 控制
