@@ -10,6 +10,16 @@
 - 业务逻辑处理
 - 数据格式化
 
+## 目录结构
+```
+service/
+├── index.js        # 统一导出入口
+├── demo.js         # demo 服务
+└── config.js       # config 服务
+```
+
+模块层通过 `require('../../service')` 统一导入所有服务。
+
 ## 核心模式
 
 ### 1. 基础结构
@@ -20,15 +30,26 @@
 const db = uniCloud.database();
 const _ = db.command;
 
-const TABLE_NAME = 'xxx-table';
-const collection = db.collection(TABLE_NAME);
+const libs = require('../libs');
+const collection = db.collection('xxx-table');
 
 module.exports = {
   // 方法定义
 };
 ```
 
-### 2. 分页查询
+### 2. 统一导出入口 (service/index.js)
+```javascript
+const config = require('./config');
+const demo = require('./demo');
+
+module.exports = {
+  config,
+  demo
+};
+```
+
+### 3. 分页查询
 ```javascript
 async getList(data = {}) {
   let { pageIndex = 1, pageSize = 20, keyword = '' } = data;
@@ -55,7 +76,7 @@ async getList(data = {}) {
 }
 ```
 
-### 3. 单条查询
+### 4. 单条查询
 ```javascript
 async getById(_id) {
   const { data: [info] } = await collection.doc(_id).get();
@@ -63,7 +84,7 @@ async getById(_id) {
 }
 ```
 
-### 4. 新增记录 (字段过滤)
+### 5. 新增记录 (字段过滤)
 ```javascript
 async add(data = {}) {
   // 解构排除不应写入的字段
@@ -74,7 +95,7 @@ async add(data = {}) {
 }
 ```
 
-### 5. 更新记录 (字段过滤)
+### 6. 更新记录 (字段过滤)
 ```javascript
 async update(_id, data = {}) {
   // 解构排除敏感字段
@@ -88,7 +109,7 @@ async update(_id, data = {}) {
 }
 ```
 
-### 6. 批量删除
+### 7. 批量删除
 ```javascript
 async remove(ids) {
   if (!Array.isArray(ids)) ids = [ids];
@@ -97,16 +118,16 @@ async remove(ids) {
 }
 ```
 
-### 7. 完整示例
+### 8. 完整示例
 ```javascript
 /**
- * Demo 员工表 - 服务实现层
+ * Demo 示例表 - 服务实现层
  */
 const db = uniCloud.database();
 const _ = db.command;
 
-const TABLE_NAME = 'sf-demo-employee';
-const collection = db.collection(TABLE_NAME);
+const libs = require('../libs');
+const collection = db.collection('sf-demo-employee');
 
 module.exports = {
   async getList(data = {}) {
@@ -191,3 +212,4 @@ _.inc(n)       // 自增
 - 使用 `Date.now()` 记录时间戳
 - 批量删除使用 `_.in(ids)` 而非循环删除
 - 分页公式: `skip = (pageIndex - 1) * pageSize`
+- 每个新增的 service 文件需要在 `service/index.js` 中导出

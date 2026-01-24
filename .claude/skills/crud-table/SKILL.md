@@ -13,11 +13,11 @@
 
 ### 1. 云对象调用
 ```javascript
-const adminCo = uniCloud.importObject('sf-admin-co', { customUI: true })
+const sfCo = uniCloud.importObject('share-fission-co', { customUI: true })
 
-// 调用方式
-const res = await adminCo.action({
-  name: 'module.method',  // 如 'demo.getList'
+// 调用方式: group/module/method 三段式路由
+const res = await sfCo.action({
+  name: 'admin/demo/getList',  // 格式: {group}/{module}/{method}
   data: { /* 参数 */ }
 })
 ```
@@ -29,9 +29,9 @@ const loading = ref(false)
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await adminCo.action({
-      name: 'demo.getList',
-      data: { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, keyword: keyword.value }
+    const res = await sfCo.action({
+      name: 'admin/demo/getList',
+      data: { pageIndex: pagination.currentPage, pageSize: pagination.pageSize, keyword: searchVal.value.trim() }
     })
     tableData.list = res.list || []
     tableData.total = res.total || 0
@@ -67,11 +67,11 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
-    const action = dialogType.value === 'add' ? 'demo.add' : 'demo.update'
+    const action = dialogType.value === 'add' ? 'admin/demo/add' : 'admin/demo/update'
     const submitData = { ...formData }
     if (dialogType.value === 'add') delete submitData._id  // 新增时去除 _id
 
-    await adminCo.action({ name: action, data: submitData })
+    await sfCo.action({ name: action, data: submitData })
     ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功')
     dialogVisible.value = false  // 成功才关闭
     loadData()
@@ -86,9 +86,9 @@ const handleSubmit = async () => {
 ### 5. 删除确认 (beforeClose 实现 loading)
 ```javascript
 const handleDelete = (rows) => {
-  const ids = rows.map(r => r._id)
+  const tip = rows.length > 3 ? `${rows.length} 条数据` : rows.map(r => r.name).join('、')
 
-  ElMessageBox.confirm(`确定要删除选中的 ${ids.length} 条记录吗？`, '删除确认', {
+  ElMessageBox.confirm(`确定要删除 ${tip} 吗？`, '删除确认', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning',
@@ -96,10 +96,11 @@ const handleDelete = (rows) => {
       if (action === 'confirm') {
         instance.confirmButtonLoading = true
         try {
-          await adminCo.action({ name: 'demo.remove', data: { ids } })
+          await sfCo.action({ name: 'admin/demo/remove', data: { ids: rows.map(r => r._id) } })
           ElMessage.success('删除成功')
-          done()  // 成功才关闭
+          selectedRows.value = selectedRows.value.filter(r => !rows.some(d => d._id === r._id))
           loadData()
+          done()  // 成功才关闭
         } catch (e) {
           ElMessage.error(e.message || '删除失败')
           instance.confirmButtonLoading = false  // 失败取消 loading
@@ -108,7 +109,7 @@ const handleDelete = (rows) => {
         done()
       }
     }
-  })
+  }).catch(() => {})  // 处理取消的 Promise rejection
 }
 ```
 
