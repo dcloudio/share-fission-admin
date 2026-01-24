@@ -28,12 +28,12 @@ module.exports = async function(params = {}) {
     }
     res = await main.call(this, data);
     if (typeof action._after === "function") {
-      let newRes = await action._after.call(this, res);
+      let newRes = await action._after.call(this, null, res);
       if (newRes) res = newRes;
     }
   } catch (err) {
     if (typeof action._after === "function") {
-      let newRes = await action._after.call(this, res, err);
+      let newRes = await action._after.call(this, err, res);
       if (newRes) {
         res = newRes;
       } else {

@@ -65,13 +65,26 @@
                 <template v-else-if="column.key === 'index'">
                   {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
                 </template>
+                <template v-else-if="column.key === 'avatar'">
+                  <el-avatar :size="32" :src="rowData.avatar">
+                    <el-icon><User /></el-icon>
+                  </el-avatar>
+                </template>
                 <template v-else-if="column.key === 'status'">
-                  <el-tag :type="getStatusType(rowData[column.key])" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] }}
+                  <el-tag :type="getStatusType(rowData.status)" size="small" :disable-transitions="true">
+                    {{ getStatusText(rowData.status) }}
                   </el-tag>
                 </template>
-                <template v-else-if="column.key === 'salary'">
-                  <span class="salary-text">¥ {{ formatNumber(rowData[column.key]) }}</span>
+                <template v-else-if="column.key === 'mobile_confirmed'">
+                  <el-tag :type="rowData.mobile_confirmed ? 'success' : 'info'" size="small">
+                    {{ rowData.mobile_confirmed ? '已验证' : '未验证' }}
+                  </el-tag>
+                </template>
+                <template v-else-if="column.key === 'register_date'">
+                  {{ formatDate(rowData.register_date) }}
+                </template>
+                <template v-else-if="column.key === 'last_login_date'">
+                  {{ formatDate(rowData.last_login_date) }}
                 </template>
                 <template v-else-if="column.key === 'actions'">
                   <view class="row-actions">
@@ -92,28 +105,33 @@
           <view class="mobile-card" v-for="(item, index) in tableData.list" :key="item._id">
             <view class="card-header">
               <view class="header-main">
-                <text class="card-title">{{ item.name }}</text>
-                <el-tag size="small" :type="getStatusType(item.status)">{{ item.status }}</el-tag>
+                <el-avatar :size="40" :src="item.avatar">
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+                <view class="user-info">
+                  <text class="card-title">{{ item.nickname || item.username || '-' }}</text>
+                  <text class="card-subtitle">{{ item.mobile || '-' }}</text>
+                </view>
               </view>
-              <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
+              <el-tag size="small" :type="getStatusType(item.status)">{{ getStatusText(item.status) }}</el-tag>
             </view>
 
             <view class="card-body">
               <view class="info-row">
-                <text class="label">部门</text>
-                <text class="value">{{ item.department }}</text>
+                <text class="label">用户名</text>
+                <text class="value">{{ item.username || '-' }}</text>
               </view>
               <view class="info-row">
-                <text class="label">薪资</text>
-                <text class="value price">¥ {{ formatNumber(item.salary) }}</text>
+                <text class="label">手机号</text>
+                <text class="value">{{ item.mobile || '-' }}</text>
               </view>
               <view class="info-row">
-                <text class="label">电话</text>
-                <text class="value">{{ item.phone || '-' }}</text>
+                <text class="label">注册时间</text>
+                <text class="value">{{ formatDate(item.register_date) }}</text>
               </view>
               <view class="info-row">
-                <text class="label">入职</text>
-                <text class="value">{{ item.joinDate || '-' }}</text>
+                <text class="label">最后登录</text>
+                <text class="value">{{ formatDate(item.last_login_date) }}</text>
               </view>
             </view>
 
@@ -156,74 +174,38 @@
     <!-- 新增/编辑弹窗 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogType === 'add' ? '新增员工' : '编辑员工'"
+      :title="dialogType === 'add' ? '新增用户' : '编辑用户'"
       width="600px"
       destroy-on-close
     >
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="80px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="姓名" prop="name">
-              <el-input v-model="formData.name" placeholder="请输入姓名" />
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="formData.username" placeholder="请输入用户名" :disabled="dialogType === 'edit'" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="年龄" prop="age">
-              <el-input-number v-model="formData.age" :min="18" :max="65" style="width: 100%" />
+            <el-form-item label="昵称" prop="nickname">
+              <el-input v-model="formData.nickname" placeholder="请输入昵称" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="部门" prop="department">
-              <el-select v-model="formData.department" placeholder="请选择部门" style="width: 100%">
-                <el-option v-for="d in departments" :key="d" :label="d" :value="d" />
-              </el-select>
+            <el-form-item label="手机号" prop="mobile">
+              <el-input v-model="formData.mobile" placeholder="请输入手机号" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="城市" prop="city">
-              <el-input v-model="formData.city" placeholder="请输入城市" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="formData.email" placeholder="请输入邮箱" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="电话" prop="phone">
-              <el-input v-model="formData.phone" placeholder="请输入电话" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="地址" prop="address">
-          <el-input v-model="formData.address" placeholder="请输入地址" />
-        </el-form-item>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="薪资" prop="salary">
-              <el-input-number v-model="formData.salary" :min="0" :step="1000" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="入职日期" prop="joinDate">
-              <el-date-picker
-                v-model="formData.joinDate"
-                type="date"
-                placeholder="选择日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio v-for="s in statusOptions" :key="s" :value="s">{{ s }}</el-radio>
+            <el-radio v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -239,7 +221,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, User } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -247,13 +229,17 @@ const sfCo = uniCloud.importObject('share-fission-co', { customUI: true })
 
 // ========== 配置 ==========
 const pageConfig = reactive({
-  title: '员工管理',
-  subTitle: '通用表格 CRUD 演示，支持虚拟滚动',
-  searchPlaceholder: '搜索姓名、部门...'
+  title: '用户管理',
+  subTitle: '管理系统用户账号信息',
+  searchPlaceholder: '搜索用户名、昵称、手机号...'
 })
 
-const departments = ['技术部', '产品部', '设计部', '市场部', '运营部', '人事部', '财务部']
-const statusOptions = ['在职', '离职', '休假', '试用期']
+const statusOptions = [
+  { value: 0, label: '正常' },
+  { value: 1, label: '禁用' },
+  { value: 2, label: '审核中' },
+  { value: 3, label: '审核拒绝' }
+]
 
 // ========== 状态 ==========
 const loading = ref(false)
@@ -274,24 +260,19 @@ const submitLoading = ref(false)
 
 const getDefaultFormData = () => ({
   _id: '',
-  name: '',
-  age: 25,
-  department: '',
-  city: '',
+  username: '',
+  nickname: '',
+  mobile: '',
   email: '',
-  phone: '',
-  address: '',
-  salary: 10000,
-  joinDate: '',
-  status: '在职'
+  status: 0
 })
 
 const formData = reactive(getDefaultFormData())
 
 const formRules = {
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  department: [{ required: true, message: '请选择部门', trigger: 'change' }],
-  email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+  mobile: [{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }]
 }
 
 // ========== 计算属性 ==========
@@ -330,7 +311,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await sfCo.action({
-      name: 'admin/demo/getList',
+      name: 'admin/user/getList',
       data: {
         pageIndex: pagination.currentPage,
         pageSize: pagination.pageSize,
@@ -346,11 +327,20 @@ const loadData = async () => {
   }
 }
 
-const formatNumber = (num) => (num == null ? '-' : num.toLocaleString())
+const formatDate = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
 
 const getStatusType = (status) => {
-  const map = { '在职': 'success', '离职': 'danger', '休假': 'warning', '试用期': 'info' }
+  const map = { 0: 'success', 1: 'danger', 2: 'warning', 3: 'info' }
   return map[status] || 'info'
+}
+
+const getStatusText = (status) => {
+  const option = statusOptions.find(s => s.value === status)
+  return option ? option.label : '未知'
 }
 
 const getRowClass = ({ rowIndex }) => (rowIndex % 2 === 0 ? 'row-even' : 'row-odd')
@@ -425,7 +415,7 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
-    const action = dialogType.value === 'add' ? 'admin/demo/add' : 'admin/demo/update'
+    const action = dialogType.value === 'add' ? 'admin/user/add' : 'admin/user/update'
     const submitData = { ...formData }
     if (dialogType.value === 'add') delete submitData._id
     await sfCo.action({ name: action, data: submitData })
@@ -441,7 +431,8 @@ const handleSubmit = async () => {
 
 // 删除
 const handleDelete = (rows) => {
-  const tip = rows.length > 3 ? `${rows.length} 条数据` : rows.map(r => r.name).join('、')
+  const tip = rows.length > 3 ? `${rows.length} 条数据` : rows.map(r => r.nickname || r.username || r._id).join('、')
+
   ElMessageBox.confirm(`确定要删除 ${tip} 吗？`, '删除确认', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -450,7 +441,7 @@ const handleDelete = (rows) => {
       if (action === 'confirm') {
         instance.confirmButtonLoading = true
         try {
-          await sfCo.action({ name: 'admin/demo/remove', data: { ids: rows.map(r => r._id) } })
+          await sfCo.action({ name: 'admin/user/remove', data: { ids: rows.map(r => r._id) } })
           ElMessage.success('删除成功')
           selectedRows.value = selectedRows.value.filter(r => !rows.some(d => d._id === r._id))
           loadData()
@@ -484,7 +475,6 @@ page {
   padding: 10px;
   box-sizing: border-box;
 }
-
 
 .toolbar {
   display: flex;
@@ -548,11 +538,6 @@ page {
   &:hover {
     opacity: 1;
   }
-}
-
-.salary-text {
-  color: #f56c6c;
-  font-weight: 500;
 }
 
 .table-footer {
@@ -649,18 +634,24 @@ page {
         .header-main {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
 
-          .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #303133;
+          .user-info {
+            display: flex;
+            flex-direction: column;
+
+            .card-title {
+              font-size: 16px;
+              font-weight: 600;
+              color: #303133;
+            }
+
+            .card-subtitle {
+              font-size: 12px;
+              color: #909399;
+              margin-top: 2px;
+            }
           }
-        }
-
-        .card-index {
-          font-size: 12px;
-          color: #909399;
         }
       }
 
@@ -678,10 +669,6 @@ page {
           }
           .value {
             color: #606266;
-            &.price {
-              color: #f56c6c;
-              font-weight: 500;
-            }
           }
         }
       }
@@ -713,7 +700,6 @@ page {
         flex-wrap: wrap;
         justify-content: center;
 
-        /* Mobile: show only total, prev, next */
         .el-pagination__sizes,
         .el-pager,
         .el-pagination__jump {

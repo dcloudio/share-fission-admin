@@ -11,14 +11,7 @@
 
 ```
 pages/
-├── user/           # 用户模块
-│   ├── list.vue    # 列表页
-│   ├── add.vue     # 新增页
-│   └── edit.vue    # 编辑页
-├── order/          # 订单模块
-│   ├── list.vue
-│   └── detail.vue
-└── sf-admin/       # 管理员专有模块
+└── sf-admin/       # 本项目admin后台专有模块
     └── config/
         └── list.vue
 ```

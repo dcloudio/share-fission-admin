@@ -9,7 +9,7 @@ export const columns = [
   { key: 'city', dataKey: 'city', title: '城市', width: 100 },
   { key: 'email', dataKey: 'email', title: '邮箱', width: 200 },
   { key: 'phone', dataKey: 'phone', title: '电话', width: 140 },
-  { key: 'address', dataKey: 'address', title: '地址', minWidth: 280, maxWidth: 350 },
+  { key: 'address', dataKey: 'address', title: '地址', width: 280 },
   { key: 'salary', dataKey: 'salary', title: '薪资', width: 120, align: 'right' },
   { key: 'joinDate', dataKey: 'joinDate', title: '入职日期', width: 120 },
   { key: 'status', dataKey: 'status', title: '状态', width: 100, align: 'center' },
