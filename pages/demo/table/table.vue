@@ -334,7 +334,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await adminCo.action({
-      name: 'demo.getList',
+      name: 'admin/demo/getList',
       data: {
         pageIndex: pagination.currentPage,
         pageSize: pagination.pageSize,
@@ -429,7 +429,7 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
-    const action = dialogType.value === 'add' ? 'demo.add' : 'demo.update'
+    const action = dialogType.value === 'add' ? 'admin/demo/add' : 'admin/demo/update'
     const submitData = { ...formData }
     if (dialogType.value === 'add') delete submitData._id
     await adminCo.action({ name: action, data: submitData })
@@ -454,7 +454,7 @@ const handleDelete = (rows) => {
       if (action === 'confirm') {
         instance.confirmButtonLoading = true
         try {
-          await adminCo.action({ name: 'demo.remove', data: { ids: rows.map(r => r._id) } })
+          await adminCo.action({ name: 'admin/demo/remove', data: { ids: rows.map(r => r._id) } })
           ElMessage.success('删除成功')
           selectedRows.value = selectedRows.value.filter(r => !rows.some(d => d._id === r._id))
           loadData()

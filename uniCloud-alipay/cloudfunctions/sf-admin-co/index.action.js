@@ -6,15 +6,15 @@ module.exports = async function(params = {}) {
   if (!name) {
     return { errCode: "param-required", errMsgValue: { param: "name" } }
   }
-  const [moduleName, method] = name.split(".");
-  if (!moduleName || !method) {
+  const [group, moduleName, method] = name.split("/");
+  if (!group || !moduleName || !method) {
     return { errCode: "invalid-param-name", errMsgValue: { param: name } }
   }
   let action;
   try {
-    action = require(`./module/${moduleName}`);
+    action = require(`./module/${group}/${moduleName}`);
   } catch (err) {
-    console.error(`加载${moduleName}模块失败: `, err)
+    console.error(`加载${group}/${moduleName}模块失败: `, err)
     return { errCode: "invalid-module", errMsgValue: { moduleName } }
   }
   const main = action[method];

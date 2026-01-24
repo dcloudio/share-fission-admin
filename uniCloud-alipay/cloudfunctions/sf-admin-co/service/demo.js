@@ -1,13 +1,12 @@
 /**
- * Demo 员工表 - 服务实现层
+ * Demo 示例表 - 服务实现层
  */
-const libs = require('../libs');
-
 const db = uniCloud.database();
 const _ = db.command;
+const $ = _.aggregate;
 
-const TABLE_NAME = 'sf-demo-employee';
-const collection = db.collection(TABLE_NAME);
+const libs = require('../libs');
+const collection = db.collection("sf-demo-employee");
 
 module.exports = {
   /**

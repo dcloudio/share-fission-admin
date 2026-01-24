@@ -1,7 +1,7 @@
 // 加载uniId公共模块
 const uniIdCommon = require('uni-id-common')
 // 加载全局中间件
-const middleware = require('./middleware/index');
+const middleware = require('./middleware');
 
 module.exports = {
   // 函数执行前钩子
@@ -22,10 +22,6 @@ module.exports = {
     for (const mwName in middleware) {
       this.middleware[mwName] = middleware[mwName].bind(this);
     }
-    const methodName = this.getMethodName();
-    // 支付回调接口没有token，不需要获取用户信息
-    // 尝试从token获取用户信息
-    await this.middleware.auth(false);
     // 设置全局获取userId公共函数（可在此云对象的任意其他函数内通过 this.getUserId() 获取当前登录用户的id
     this.getUserId = () => {
       return this.authInfo && this.authInfo.uid ? this.authInfo.uid : undefined;
@@ -36,7 +32,7 @@ module.exports = {
     if (error) {
       throw error
     }
-    if (!result.errCode) result.errCode = 0;
+    if (typeof result === "object" && !result.errCode) result.errCode = 0;
     return result
   },
   // 定时任务
