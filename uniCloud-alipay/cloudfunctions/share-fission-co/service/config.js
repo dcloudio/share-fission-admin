@@ -13,6 +13,7 @@ const CONFIG_ID = 'main';
 module.exports = {
   /**
    * 获取系统配置
+   * @returns {Promise<Object>} 系统配置对象
    */
   async get() {
     const { data: [info] } = await collection.doc(CONFIG_ID).get();
@@ -21,6 +22,13 @@ module.exports = {
 
   /**
    * 更新系统配置
+   * @param {Object} data - 配置数据
+   * @param {string} [data.app_name] - 应用名称
+   * @param {string} [data.app_logo] - 应用 Logo
+   * @param {string} [data.app_description] - 应用描述
+   * @param {string} [data.copyright] - 版权信息
+   * @param {string} [data.icp_number] - ICP 备案号
+   * @returns {Promise<{result: Object}>} 更新结果
    */
   async update(data = {}) {
     const { _id, ...rest } = data;

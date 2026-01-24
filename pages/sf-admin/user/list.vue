@@ -53,6 +53,15 @@
                     @change="handleSelectAll"
                   />
                 </template>
+                <template v-else-if="column.sortable">
+                  <view class="sortable-header" @click="handleSort(column.key)">
+                    <span>{{ column.title }}</span>
+                    <view class="sort-icons">
+                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'asc' }"><CaretTop /></el-icon>
+                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'desc' }"><CaretBottom /></el-icon>
+                    </view>
+                  </view>
+                </template>
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
@@ -85,6 +94,9 @@
                 </template>
                 <template v-else-if="column.key === 'last_login_date'">
                   {{ formatDate(rowData.last_login_date) }}
+                </template>
+                <template v-else-if="column.key === 'score_balance' || column.key === 'score_total' || column.key === 'score_withdrawn'">
+                  {{ formatNumber(rowData[column.key]) }}
                 </template>
                 <template v-else-if="column.key === 'actions'">
                   <view class="row-actions">
@@ -124,6 +136,18 @@
               <view class="info-row">
                 <text class="label">手机号</text>
                 <text class="value">{{ item.mobile || '-' }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">积分余额</text>
+                <text class="value">{{ formatNumber(item.score_balance) }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">累计积分</text>
+                <text class="value">{{ formatNumber(item.score_total) }}</text>
+              </view>
+              <view class="info-row">
+                <text class="label">已提现积分</text>
+                <text class="value">{{ formatNumber(item.score_withdrawn) }}</text>
               </view>
               <view class="info-row">
                 <text class="label">注册时间</text>
@@ -221,7 +245,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, User } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, User, CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -252,6 +276,9 @@ const formRef = ref(null)
 const tableData = reactive({ list: [], total: 0 })
 const selectedRows = ref([])
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
+
+// 排序相关
+const sortState = reactive({ field: '', order: '' }) // order: 'asc' | 'desc' | ''
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -310,13 +337,19 @@ const calculateTableHeight = () => {
 const loadData = async () => {
   loading.value = true
   try {
+    const data = {
+      pageIndex: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      keyword: searchVal.value.trim()
+    }
+    // 添加排序参数
+    if (sortState.field && sortState.order) {
+      data.sortField = sortState.field
+      data.sortOrder = sortState.order
+    }
     const res = await sfCo.action({
       name: 'admin/user/getList',
-      data: {
-        pageIndex: pagination.currentPage,
-        pageSize: pagination.pageSize,
-        keyword: searchVal.value.trim()
-      }
+      data
     })
     tableData.list = res.list || []
     tableData.total = res.total || 0
@@ -333,14 +366,19 @@ const formatDate = (timestamp) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+const formatNumber = (val) => {
+  if (val === undefined || val === null) return '0'
+  return val.toLocaleString()
+}
+
 const getStatusType = (status) => {
   const map = { 0: 'success', 1: 'danger', 2: 'warning', 3: 'info' }
-  return map[status] || 'info'
+  return map[status] || 'success'
 }
 
 const getStatusText = (status) => {
   const option = statusOptions.find(s => s.value === status)
-  return option ? option.label : '未知'
+  return option ? option.label : '正常'
 }
 
 const getRowClass = ({ rowIndex }) => (rowIndex % 2 === 0 ? 'row-even' : 'row-odd')
@@ -388,6 +426,27 @@ const handleSizeChange = (size) => {
 
 const handlePageChange = (page) => {
   pagination.currentPage = page
+  loadData()
+}
+
+// 排序
+const handleSort = (field) => {
+  if (sortState.field === field) {
+    // 同一字段：asc -> desc -> 无排序
+    if (sortState.order === 'asc') {
+      sortState.order = 'desc'
+    } else if (sortState.order === 'desc') {
+      sortState.field = ''
+      sortState.order = ''
+    } else {
+      sortState.order = 'asc'
+    }
+  } else {
+    // 切换字段，默认升序
+    sortState.field = field
+    sortState.order = 'asc'
+  }
+  pagination.currentPage = 1
   loadData()
 }
 
@@ -537,6 +596,36 @@ page {
 
   &:hover {
     opacity: 1;
+  }
+}
+
+.sortable-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: pointer;
+  user-select: none;
+  gap: 4px;
+
+  &:hover {
+    color: #409eff;
+  }
+
+  .sort-icons {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+
+    .el-icon {
+      font-size: 12px;
+      color: #c0c4cc;
+      height: 8px;
+      overflow: hidden;
+
+      &.active {
+        color: #409eff;
+      }
+    }
   }
 }
 
