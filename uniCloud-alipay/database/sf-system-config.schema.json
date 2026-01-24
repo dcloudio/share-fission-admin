@@ -49,7 +49,7 @@
 		"withdrawal_min_score": {
 			"bsonType": "int",
 			"description": "最低提现积分",
-			"defaultValue": 5000
+			"defaultValue": 1000
 		},
 		"update_time": {
 			"bsonType": "timestamp",

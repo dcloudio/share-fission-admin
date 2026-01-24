@@ -1,12 +1,7 @@
 <template>
   <view class="page-container">
     <!-- 页面头部 -->
-    <view class="page-header">
-      <view class="header-title-area">
-        <view class="page-title">{{ pageConfig.title }}</view>
-        <view class="page-subtitle" v-if="pageConfig.subTitle">{{ pageConfig.subTitle }}</view>
-      </view>
-    </view>
+    <page-header :title="pageConfig.title" :sub-title="pageConfig.subTitle" />
 
     <!-- 工具栏区域 -->
     <view class="toolbar">
@@ -489,29 +484,6 @@ page {
   box-sizing: border-box;
 }
 
-.page-header {
-  background-color: #fff;
-  padding: 20px 24px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-
-  .header-title-area {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-
-    .page-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #303133;
-    }
-
-    .page-subtitle {
-      font-size: 13px;
-      color: #909399;
-    }
-  }
-}
 
 .toolbar {
   display: flex;
@@ -629,17 +601,6 @@ page {
     padding: 12px;
     height: 100vh;
     overflow: hidden;
-  }
-
-  .page-header {
-    padding: 16px;
-    margin-bottom: 12px;
-
-    .header-title-area {
-      .page-title {
-        font-size: 18px;
-      }
-    }
   }
 
   .toolbar {

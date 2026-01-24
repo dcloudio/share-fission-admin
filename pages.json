@@ -156,7 +156,17 @@
     }
 }
 ],
-	"subPackages": [{
+	"subPackages": [
+    {
+    	"root": "pages/sf-admin",
+    	"pages": [{
+        	"path": "config/form",
+        	"style": {
+        		"navigationBarTitleText": "系统配置"
+        	}
+      }]
+    },
+    {
 			"root": "pages/system",
 			"pages": [{
 					"path": "menu/list",

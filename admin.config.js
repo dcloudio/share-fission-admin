@@ -41,6 +41,17 @@ export default {
 	sideBar: { // 左侧菜单
 		// 配置静态菜单列表（放置在用户被授权的菜单列表下边）
 		staticMenu: [{
+			menu_id: "sf-admin",
+			text: '新增页面',
+			icon: 'admin-icons-kaifashili',
+			url: "",
+			children: [{
+				menu_id: "sf-admin-config-form",
+				text: '系统配置',
+				icon: 'admin-icons-icon',
+				value: '/pages/sf-admin/config/form',
+			}]
+		}, {
 			menu_id: "demo",
 			text: '静态功能演示',
 			icon: 'admin-icons-kaifashili',

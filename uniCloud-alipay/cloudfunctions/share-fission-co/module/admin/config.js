@@ -10,7 +10,10 @@ module.exports = {
    * 获取配置
    */
   async get() {
-    return await service.config.get();
+    const info = await service.config.get();
+    return {
+      info
+    }
   },
 
   /**
