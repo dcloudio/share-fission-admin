@@ -53,6 +53,15 @@
                     @change="handleSelectAll"
                   />
                 </template>
+                <template v-else-if="column.sortable">
+                  <view class="sortable-header" @click="handleSort(column.key)">
+                    <span>{{ column.title }}</span>
+                    <view class="sort-icons">
+                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'asc' }"><CaretTop /></el-icon>
+                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'desc' }"><CaretBottom /></el-icon>
+                    </view>
+                  </view>
+                </template>
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
@@ -239,7 +248,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -266,6 +275,9 @@ const formRef = ref(null)
 const tableData = reactive({ list: [], total: 0 })
 const selectedRows = ref([])
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
+
+// 排序相关
+const sortState = reactive({ field: '', order: '' }) // order: 'asc' | 'desc' | ''
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -329,13 +341,19 @@ const calculateTableHeight = () => {
 const loadData = async () => {
   loading.value = true
   try {
+    const data = {
+      pageIndex: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      keyword: searchVal.value.trim()
+    }
+    // 添加排序参数
+    if (sortState.field && sortState.order) {
+      data.sortField = sortState.field
+      data.sortOrder = sortState.order
+    }
     const res = await sfCo.action({
       name: 'admin/demo/getList',
-      data: {
-        pageIndex: pagination.currentPage,
-        pageSize: pagination.pageSize,
-        keyword: searchVal.value.trim()
-      }
+      data
     })
     tableData.list = res.list || []
     tableData.total = res.total || 0
@@ -398,6 +416,27 @@ const handleSizeChange = (size) => {
 
 const handlePageChange = (page) => {
   pagination.currentPage = page
+  loadData()
+}
+
+// 排序
+const handleSort = (field) => {
+  if (sortState.field === field) {
+    // 同一字段：asc -> desc -> 无排序
+    if (sortState.order === 'asc') {
+      sortState.order = 'desc'
+    } else if (sortState.order === 'desc') {
+      sortState.field = ''
+      sortState.order = ''
+    } else {
+      sortState.order = 'asc'
+    }
+  } else {
+    // 切换字段，默认升序
+    sortState.field = field
+    sortState.order = 'asc'
+  }
+  pagination.currentPage = 1
   loadData()
 }
 
@@ -547,6 +586,36 @@ page {
 
   &:hover {
     opacity: 1;
+  }
+}
+
+.sortable-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  gap: 4px;
+
+  &:hover {
+    color: #409eff;
+  }
+
+  .sort-icons {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+
+    .el-icon {
+      font-size: 12px;
+      color: #c0c4cc;
+      height: 8px;
+      overflow: hidden;
+
+      &.active {
+        color: #409eff;
+      }
+    }
   }
 }
 

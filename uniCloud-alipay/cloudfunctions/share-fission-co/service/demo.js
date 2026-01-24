@@ -11,9 +11,15 @@ const collection = db.collection("sf-demo-employee");
 module.exports = {
   /**
    * 分页查询列表
+   * @param {Object} data
+   * @param {number} data.pageIndex - 页码
+   * @param {number} data.pageSize - 每页条数
+   * @param {string} data.keyword - 搜索关键词
+   * @param {string} data.sortField - 排序字段
+   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '' } = data;
+    let { pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = '' } = data;
 
     let where = {};
     // 关键词搜索
@@ -25,7 +31,18 @@ module.exports = {
     }
 
     const skip = (pageIndex - 1) * pageSize;
-    let { data: list } = await collection.where(where).orderBy('create_time', 'desc').skip(skip).limit(pageSize).get();
+
+    // 构建查询
+    let query = collection.where(where);
+
+    // 处理排序
+    if (sortField && sortOrder) {
+      query = query.orderBy(sortField, sortOrder);
+    }
+    // 默认按创建时间倒序
+    query = query.orderBy('create_time', 'desc');
+
+    let { data: list } = await query.skip(skip).limit(pageSize).get();
     let { total } = await collection.where(where).count();
 
     return { list, total };
