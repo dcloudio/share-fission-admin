@@ -6,7 +6,7 @@ const _ = db.command;
 const $ = _.aggregate;
 
 const libs = require('../libs');
-const collection = db.collection("sf_system_config");
+const collection = db.collection("sf-system-config");
 
 const CONFIG_ID = 'main';
 
