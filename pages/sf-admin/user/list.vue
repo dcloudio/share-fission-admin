@@ -84,11 +84,6 @@
                     {{ getStatusText(rowData.status) }}
                   </el-tag>
                 </template>
-                <template v-else-if="column.key === 'mobile_confirmed'">
-                  <el-tag :type="rowData.mobile_confirmed ? 'success' : 'info'" size="small">
-                    {{ rowData.mobile_confirmed ? '已验证' : '未验证' }}
-                  </el-tag>
-                </template>
                 <template v-else-if="column.key === 'register_date'">
                   {{ formatDate(rowData.register_date) }}
                 </template>
@@ -294,7 +289,7 @@ const getDefaultFormData = () => ({
   status: 0
 })
 
-const formData = reactive(getDefaultFormData())
+const formData = ref(getDefaultFormData())
 
 const formRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -453,14 +448,14 @@ const handleSort = (field) => {
 // 新增
 const handleAdd = () => {
   dialogType.value = 'add'
-  Object.assign(formData, getDefaultFormData())
+  formData.value = getDefaultFormData()
   dialogVisible.value = true
 }
 
 // 编辑
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  Object.assign(formData, JSON.parse(JSON.stringify(row)))
+  formData.value = Object.assign({}, getDefaultFormData(), row)
   dialogVisible.value = true
 }
 
@@ -475,7 +470,7 @@ const handleSubmit = async () => {
   submitLoading.value = true
   try {
     const action = dialogType.value === 'add' ? 'admin/user/add' : 'admin/user/update'
-    const submitData = { ...formData }
+    const submitData = { ...formData.value }
     if (dialogType.value === 'add') delete submitData._id
     await sfCo.action({ name: action, data: submitData })
     ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功')

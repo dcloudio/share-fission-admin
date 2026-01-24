@@ -298,7 +298,7 @@ const getDefaultFormData = () => ({
   status: '在职'
 })
 
-const formData = reactive(getDefaultFormData())
+const formData = ref(getDefaultFormData())
 
 const formRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
@@ -443,14 +443,14 @@ const handleSort = (field) => {
 // 新增
 const handleAdd = () => {
   dialogType.value = 'add'
-  Object.assign(formData, getDefaultFormData())
+  formData.value = getDefaultFormData()
   dialogVisible.value = true
 }
 
 // 编辑
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  Object.assign(formData, JSON.parse(JSON.stringify(row)))
+  formData.value = Object.assign({}, getDefaultFormData(), row)
   dialogVisible.value = true
 }
 
@@ -465,7 +465,7 @@ const handleSubmit = async () => {
   submitLoading.value = true
   try {
     const action = dialogType.value === 'add' ? 'admin/demo/add' : 'admin/demo/update'
-    const submitData = { ...formData }
+    const submitData = { ...formData.value }
     if (dialogType.value === 'add') delete submitData._id
     await sfCo.action({ name: action, data: submitData })
     ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功')

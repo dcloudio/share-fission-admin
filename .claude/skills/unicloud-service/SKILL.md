@@ -62,3 +62,4 @@ _.inc(n)       // 自增
 - 批量删除使用 `_.in(ids)` 而非循环删除
 - 分页公式: `skip = (pageIndex - 1) * pageSize`
 - 每个新增的 service 文件需要在 `service/index.js` 中导出
+- 每个函数的每个请求参数都要写注释说明
