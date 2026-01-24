@@ -247,7 +247,7 @@ import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
-const adminCo = uniCloud.importObject('sf-admin-co', { customUI: true })
+const shareFissionCo = uniCloud.importObject('share-fission-co', { customUI: true })
 
 // ========== 配置 ==========
 const pageConfig = reactive({
@@ -333,7 +333,7 @@ const calculateTableHeight = () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await adminCo.action({
+    const res = await shareFissionCo.action({
       name: 'admin/demo/getList',
       data: {
         pageIndex: pagination.currentPage,
@@ -432,7 +432,7 @@ const handleSubmit = async () => {
     const action = dialogType.value === 'add' ? 'admin/demo/add' : 'admin/demo/update'
     const submitData = { ...formData }
     if (dialogType.value === 'add') delete submitData._id
-    await adminCo.action({ name: action, data: submitData })
+    await shareFissionCo.action({ name: action, data: submitData })
     ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功')
     dialogVisible.value = false
     loadData()
@@ -454,7 +454,7 @@ const handleDelete = (rows) => {
       if (action === 'confirm') {
         instance.confirmButtonLoading = true
         try {
-          await adminCo.action({ name: 'admin/demo/remove', data: { ids: rows.map(r => r._id) } })
+          await shareFissionCo.action({ name: 'admin/demo/remove', data: { ids: rows.map(r => r._id) } })
           ElMessage.success('删除成功')
           selectedRows.value = selectedRows.value.filter(r => !rows.some(d => d._id === r._id))
           loadData()
