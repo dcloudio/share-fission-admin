@@ -114,9 +114,14 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, type, startTime, endTime, sortField = 'create_time', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, type, startTime, endTime, sortField = 'create_time', sortOrder = 'desc' } = data;
 
     let where = {};
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
+
     // 类型筛选
     if (type) {
       where.type = type;

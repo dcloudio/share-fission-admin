@@ -104,9 +104,14 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '', status = '', sortField = '', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', status = '', sortField = '', sortOrder = 'desc' } = data;
 
     let matchConditions = [];
+
+    // user_id 筛选
+    if (user_id) {
+      matchConditions.push({ user_id: user_id });
+    }
 
     // 状态筛选
     if (status) {

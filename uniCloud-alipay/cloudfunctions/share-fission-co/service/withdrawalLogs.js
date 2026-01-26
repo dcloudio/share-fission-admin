@@ -89,9 +89,14 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '', status, sortField = 'create_time', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', status, sortField = 'create_time', sortOrder = 'desc' } = data;
 
     let where = {};
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
+
     // 状态筛选
     if (status !== undefined && status !== null && status !== '') {
       where.status = status;

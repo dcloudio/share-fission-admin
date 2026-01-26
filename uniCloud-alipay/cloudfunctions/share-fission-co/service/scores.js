@@ -94,9 +94,14 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
 
     let where = {};
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
+
     // 关键词搜索（按用户ID搜索）
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {

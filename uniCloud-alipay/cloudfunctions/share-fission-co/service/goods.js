@@ -84,11 +84,15 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '', category_id, status, sortField = 'sort_order', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', category_id, status, sortField = 'sort_order', sortOrder = 'desc' } = data;
 
     let where = {
       is_deleted: _.neq(true) // 排除软删除的记录
     };
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
 
     // 分类筛选
     if (category_id) {
@@ -226,22 +230,36 @@ module.exports = {
   },
 
   /**
-   * 删除商品记录（软删除，支持批量）
+   * 删除商品记录（软删除，支持多种参数形式）
    * @async
    * @function remove
-   * @description 软删除商品，将 is_deleted 设置为 true，而非真正删除数据
-   * @param {string|string[]} ids - 单个商品ID或ID数组
+   * @description 支持三种删除方式：单个ID、ID数组批量删除、自定义where条件删除。
+   * 软删除商品，将 is_deleted 设置为 true，而非真正删除数据
+   * @param {string|string[]|Object} data - 删除条件
+   *   - string: 单个记录ID，删除该条记录
+   *   - string[]: ID数组，批量删除多条记录
+   *   - Object: 完整的where条件对象
    * @returns {Promise<{deleted: number}>} 更新的记录数（软删除实际是更新操作）
    * @example
-   * // 软删除单个商品
+   * // 根据ID删除单条记录
    * await goodsService.remove('xxx');
    *
-   * // 批量软删除
-   * await goodsService.remove(['id1', 'id2']);
+   * // 根据ID数组批量删除
+   * await goodsService.remove(['id1', 'id2', 'id3']);
+   *
+   * // 根据自定义条件删除
+   * await goodsService.remove({ status: 0 });
    */
-  async remove(ids) {
-    if (!Array.isArray(ids)) ids = [ids];
-    const { updated } = await collection.where({ _id: _.in(ids) }).update({
+  async remove(data) {
+    let condition;
+    if (typeof data === 'string') {
+      condition = { _id: data };
+    } else if (Array.isArray(data)) {
+      condition = { _id: _.in(data) };
+    } else {
+      condition = data;
+    }
+    const { updated } = await collection.where(condition).update({
       is_deleted: true,
       update_time: Date.now()
     });

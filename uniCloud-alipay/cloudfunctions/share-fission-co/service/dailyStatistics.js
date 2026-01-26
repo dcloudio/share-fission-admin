@@ -74,9 +74,14 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, startDate = '', endDate = '', sortField = '', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, startDate = '', endDate = '', sortField = '', sortOrder = 'desc' } = data;
 
     let where = {};
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
+
     // 日期范围筛选（_id 就是日期）
     if (startDate && endDate) {
       where._id = _.gte(startDate).and(_.lte(endDate));

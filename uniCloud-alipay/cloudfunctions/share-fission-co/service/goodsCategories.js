@@ -72,9 +72,13 @@ module.exports = {
    * });
    */
   async getList(data = {}) {
-    let { pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', sortField = 'sort', sortOrder = 'asc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', sortField = 'sort', sortOrder = 'asc' } = data;
 
     let where = {};
+
+    if (user_id) {
+      where.user_id = user_id;
+    }
 
     // 父分类筛选
     if (parent_id === 'top') {
@@ -262,21 +266,44 @@ module.exports = {
   },
 
   /**
-   * 删除分类记录（支持批量，级联删除子分类）
+   * 删除分类记录（支持多种参数形式，级联删除子分类）
    * @async
    * @function remove
-   * @description 根据ID删除分类，会递归删除所有子分类
-   * @param {string|string[]} ids - 单个分类ID或ID数组
+   * @description 支持三种删除方式：单个ID、ID数组批量删除、自定义where条件删除。
+   * 会递归删除所有子分类
+   * @param {string|string[]|Object} data - 删除条件
+   *   - string: 单个记录ID，删除该条记录
+   *   - string[]: ID数组，批量删除多条记录
+   *   - Object: 完整的where条件对象
    * @returns {Promise<{deleted: number}>} 删除的记录数（包含子分类）
    * @example
-   * // 删除单个分类（及其所有子分类）
+   * // 根据ID删除单条记录
    * await goodsCategoriesService.remove('xxx');
    *
-   * // 批量删除
-   * await goodsCategoriesService.remove(['id1', 'id2']);
+   * // 根据ID数组批量删除
+   * await goodsCategoriesService.remove(['id1', 'id2', 'id3']);
+   *
+   * // 根据自定义条件删除
+   * await goodsCategoriesService.remove({ status: 0 });
    */
-  async remove(ids) {
-    if (!Array.isArray(ids)) ids = [ids];
+  async remove(data) {
+    let condition;
+    let ids;
+    if (typeof data === 'string') {
+      condition = { _id: data };
+      ids = [data];
+    } else if (Array.isArray(data)) {
+      condition = { _id: _.in(data) };
+      ids = data;
+    } else {
+      // 自定义条件，先查出符合条件的ID
+      const { data: records } = await collection.where(data).field({ _id: true }).get();
+      ids = records.map(r => r._id);
+      if (ids.length === 0) {
+        return { deleted: 0 };
+      }
+      condition = { _id: _.in(ids) };
+    }
 
     // 获取所有要删除的分类及其子分类
     const allIds = new Set(ids);
