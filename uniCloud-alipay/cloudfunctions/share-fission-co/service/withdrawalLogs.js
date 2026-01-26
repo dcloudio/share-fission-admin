@@ -7,6 +7,8 @@ const _ = db.command;
 const { Tables } = require('../constants');
 const libs = require('../libs');
 const collection = db.collection(Tables.withdrawalLogs);
+const usersCollection = db.collection(Tables.users);
+const scoresCollection = db.collection(Tables.scores);
 
 module.exports = {
   /**
@@ -109,7 +111,49 @@ module.exports = {
     }
 
     const { updated } = await collection.doc(_id).update(updateData);
+
+    // 拒绝时退还积分
+    if (status === 2) {
+      await this._refundScore(record);
+    }
+
     return { updated };
+  },
+
+  /**
+   * 退还积分（拒绝提现时调用）
+   * @param {Object} record - 提现记录
+   * @private
+   */
+  async _refundScore(record) {
+    const { user_id, score, _id: withdrawal_id } = record;
+
+    // 获取用户当前积分
+    const { data: [user] } = await usersCollection.doc(user_id).get();
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    const currentScore = user.score || 0;
+    const newBalance = currentScore + score;
+
+    // 更新用户积分
+    await usersCollection.doc(user_id).update({
+      score: _.inc(score),
+      score_withdrawn: _.inc(score * -1),
+    });
+
+    // 添加积分退还记录
+    await scoresCollection.add({
+      user_id,
+      score: score,
+      type: 1, // 1=收入
+      balance: newBalance,
+      source: 'withdraw_refund',
+      withdrawal_id,
+      comment: '提现申请被拒绝，积分退还',
+      create_date: Date.now()
+    });
   },
 
   /**
