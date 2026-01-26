@@ -14,6 +14,38 @@ export const columns = [
   { key: 'exchange_rate', dataKey: 'exchange_rate', title: '汇率', width: 80, align: 'center' },
 ]
 
+/**
+ * 图表分组配置
+ */
+export const chartGroups = [
+  {
+    id: 'revenue',
+    name: '收益趋势',
+    fields: [
+      { key: 'ad_revenue', name: '广告收益', color: '#e6a23c' },
+      { key: 'total_cash', name: '资金池', color: '#67c23a' }
+    ]
+  },
+  {
+    id: 'score',
+    name: '积分流动',
+    fields: [
+      { key: 'score_added', name: '新增积分', color: '#409eff' },
+      { key: 'score_consumed', name: '消耗积分', color: '#f56c6c' },
+      { key: 'score_withdrawn', name: '提现积分', color: '#e6a23c' }
+    ]
+  },
+  {
+    id: 'users',
+    name: '用户增长',
+    fields: [
+      { key: 'new_users', name: '新增用户', color: '#409eff' },
+      { key: 'active_users', name: '活跃用户', color: '#67c23a' }
+    ]
+  }
+]
+
 export default {
-  columns
+  columns,
+  chartGroups
 }

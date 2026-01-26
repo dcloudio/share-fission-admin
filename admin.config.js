@@ -54,7 +54,7 @@ export default {
         },
         {
           menu_id: "sf-admin-user",
-          text: '用户管理',
+          text: '分销用户管理',
           icon: 'admin-icons-icon',
           value: "/pages/sf-admin/user/list"
         },
@@ -87,7 +87,7 @@ export default {
         },
         {
           menu_id: "sf-admin-system",
-          text: '系统设置',
+          text: '分销系统设置',
           icon: 'admin-icons-icon',
           value: '/pages/sf-admin/config/form'
         }

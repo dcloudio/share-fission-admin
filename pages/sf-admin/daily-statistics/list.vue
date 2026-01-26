@@ -24,6 +24,24 @@
       </view>
     </view>
 
+    <!-- 图表区域 -->
+    <view class="chart-section pc-only">
+      <view class="chart-header">
+        <text class="chart-title">数据趋势</text>
+        <view class="chart-tabs">
+          <el-radio-group v-model="currentChartGroup" size="small" @change="updateChart">
+            <el-radio-button v-for="group in chartGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </el-radio-button>
+          </el-radio-group>
+        </view>
+      </view>
+      <view class="chart-container">
+        <div ref="chartRef" class="chart-dom"></div>
+        <el-empty v-if="!hasChartData" description="暂无图表数据" />
+      </view>
+    </view>
+
     <!-- 表格区域 -->
     <view class="table-container" ref="tableContainer">
       <div class="virtual-table-wrapper pc-only" v-loading="loading">
@@ -136,14 +154,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage } from 'element-plus'
 import { CaretTop, CaretBottom } from '@element-plus/icons-vue'
-import { columns } from './options.js'
+import * as echarts from 'echarts'
+import { columns, chartGroups } from './options.js'
 
 // 云对象
 const sfCo = uniCloud.importObject('share-fission-co', { customUI: true })
+
+// 图表相关
+const chartRef = ref(null)
+let chartInstance = null
+const currentChartGroup = ref('revenue')
+const hasChartData = computed(() => tableData.list && tableData.list.length > 0)
 
 // ========== 配置 ==========
 const pageConfig = reactive({
@@ -237,11 +262,91 @@ const loadData = async () => {
     })
     tableData.list = res.list || []
     tableData.total = res.total || 0
+    // 更新图表
+    nextTick(() => updateChart())
   } catch (e) {
     ElMessage.error('加载数据失败')
   } finally {
     loading.value = false
   }
+}
+
+// 初始化图表
+const initChart = () => {
+  if (!chartRef.value) return
+  chartInstance = echarts.init(chartRef.value)
+  window.addEventListener('resize', handleResize)
+}
+
+// 更新图表
+const updateChart = () => {
+  if (!chartInstance || !tableData.list || tableData.list.length === 0) return
+
+  const group = chartGroups.find(g => g.id === currentChartGroup.value)
+  if (!group) return
+
+  // 按日期升序排列
+  const sortedList = [...tableData.list].sort((a, b) => a._id.localeCompare(b._id))
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' }
+    },
+    legend: {
+      data: group.fields.map(f => f.name),
+      bottom: 0
+    },
+    grid: {
+      left: 50,
+      right: 30,
+      top: 30,
+      bottom: 50,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: sortedList.map(item => item._id),
+      axisLabel: { color: '#666' },
+      axisLine: { lineStyle: { color: '#ddd' } }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: '#666' },
+      splitLine: { lineStyle: { color: '#eee' } }
+    },
+    series: group.fields.map(field => ({
+      name: field.name,
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: field.color, width: 2 },
+      itemStyle: { color: field.color },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: field.color + '40' },
+          { offset: 1, color: field.color + '05' }
+        ])
+      },
+      data: sortedList.map(item => item[field.key] || 0)
+    }))
+  }
+
+  chartInstance.setOption(option, true)
+}
+
+// 图表自适应
+const handleResize = () => {
+  chartInstance?.resize()
+}
+
+// 销毁图表
+const destroyChart = () => {
+  window.removeEventListener('resize', handleResize)
+  chartInstance?.dispose()
+  chartInstance = null
 }
 
 const formatNumber = (num) => (num == null ? '-' : num.toLocaleString())
@@ -299,6 +404,16 @@ const handleSort = (field) => {
 onLoad(() => {
   loadData()
   setTimeout(calculateTableHeight, 300)
+})
+
+onMounted(() => {
+  nextTick(() => {
+    initChart()
+  })
+})
+
+onUnmounted(() => {
+  destroyChart()
 })
 </script>
 
@@ -400,6 +515,51 @@ page {
 .score-text {
   color: #409eff;
   font-weight: 500;
+}
+
+.chart-section {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-bottom: 16px;
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+    }
+
+    .chart-tabs {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .chart-container {
+    width: 100%;
+    height: 350px;
+    position: relative;
+
+    .chart-dom {
+      width: 100%;
+      height: 100%;
+    }
+
+    .el-empty {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
 }
 
 .table-footer {
