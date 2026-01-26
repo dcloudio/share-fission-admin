@@ -27,33 +27,9 @@ service/
 
 模块层通过 `require('../../service')` 统一导入所有服务。
 
-## 常用命令操作符
-```javascript
-const _ = db.command;
+## 依赖技能
 
-// 比较
-_.eq(value)    // 等于
-_.neq(value)   // 不等于
-_.gt(value)    // 大于
-_.gte(value)   // 大于等于
-_.lt(value)    // 小于
-_.lte(value)   // 小于等于
-
-// 逻辑
-_.and([...])   // 与
-_.or([...])    // 或
-_.not(...)     // 非
-
-// 数组
-_.in([...])    // 在数组中
-_.nin([...])   // 不在数组中
-
-// 字段
-_.exists(true) // 字段存在
-_.set(value)   // 设置字段值
-_.remove()     // 删除字段
-_.inc(n)       // 自增
-```
+- `unicloud-database`
 
 ## 注意事项
 - 新增时过滤 `_id`, `create_time`, `update_time` 等系统字段

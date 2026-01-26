@@ -29,6 +29,7 @@
 - `uniapp-pages-add`
 - `unicloud-module`
 - `unicloud-service`
+- `unicloud-database`
 
 ## 注意事项
 - 使用 `_id` 而非 `id` (MongoDB 文档ID)

@@ -7,8 +7,9 @@ const instructions = `## 指令：强制技能激活流程（必须执行）
 可用技能列表：
 - crud-table: 表格数据CRUD
 - unicloud-module: 云对象模块层(控制器)
-- unicloud-service: 云对象服务层(含数据库操作)
+- unicloud-service: 云对象服务层
 - uniapp-pages-add: 新增页面技能
+- unicloud-database: 数据库操作
 
 ### 步骤 2 - 激活
 如果任何技能为"是" → 立即使用 Skill() 工具激活

@@ -122,4 +122,13 @@ common.toDecimal = function(val, precision = 0) {
   return parseFloat(val.toFixed(precision));
 };
 
+/**
+ * 判断字符串是否满足objectid格式
+ */
+common.isObjectId = function(str) {
+  // MongoDB ObjectId 是 24 位十六进制字符串（0-9, a-f, A-F）
+  if (typeof str !== 'string') return false;
+  return /^[0-9a-fA-F]{24}$/.test(str);
+};
+
 module.exports = common;

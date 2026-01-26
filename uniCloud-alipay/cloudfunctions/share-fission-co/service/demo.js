@@ -6,6 +6,7 @@ const _ = db.command;
 const $ = _.aggregate;
 
 const { Tables } = require('../constants');
+const libs = require('../libs');
 const collection = db.collection(Tables.demoEmployee);
 
 module.exports = {
@@ -24,10 +25,17 @@ module.exports = {
     let where = {};
     // 关键词搜索
     if (keyword) {
-      where = _.or([
-        { name: new RegExp(keyword, 'i') },
-        { department: new RegExp(keyword, 'i') }
-      ]);
+      if (libs.common.isObjectId(keyword)) {
+        where = _.or([
+          { name: keyword },
+          { department: keyword }
+        ]);
+      } else {
+        where = _.or([
+          { name: new RegExp(keyword, 'i') },
+          { department: new RegExp(keyword, 'i') }
+        ]);
+      }
     }
 
     const skip = (pageIndex - 1) * pageSize;

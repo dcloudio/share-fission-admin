@@ -5,6 +5,7 @@ const db = uniCloud.database();
 const _ = db.command;
 
 const { Tables } = require('../constants');
+const libs = require('../libs');
 const collection = db.collection(Tables.scores);
 
 module.exports = {
@@ -23,9 +24,15 @@ module.exports = {
     let where = {};
     // 关键词搜索（按用户ID搜索）
     if (keyword) {
-      where = _.or([
-        { user_id: new RegExp(keyword, 'i') }
-      ]);
+      if (libs.common.isObjectId(keyword)) {
+        where = _.or([
+          { user_id: keyword }
+        ]);
+      } else {
+        where = _.or([
+          { user_id: new RegExp(keyword, 'i') }
+        ]);
+      }
     }
 
     const skip = (pageIndex - 1) * pageSize;
