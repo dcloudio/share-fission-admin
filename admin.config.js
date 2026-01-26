@@ -70,6 +70,12 @@ export default {
           value: '/pages/sf-admin/ad-watch-logs/list',
         },
         {
+          menu_id: "sf-admin-fund-pool-logs-list",
+          text: '资金池流水',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/fund-pool-logs/list',
+        },
+        {
           menu_id: "sf-admin-config-form",
           text: '系统配置',
           icon: 'admin-icons-icon',

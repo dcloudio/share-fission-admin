@@ -184,6 +184,11 @@
         	"style": {
         		"navigationBarTitleText": "广告观看记录"
         	}
+      }, {
+        	"path": "fund-pool-logs/list",
+        	"style": {
+        		"navigationBarTitleText": "资金池流水"
+        	}
       }]
     },
     {
