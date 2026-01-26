@@ -8,6 +8,8 @@ const Tables = {
   // ========== 业务表 ==========
   // 商品表
   goods: 'sf-goods',
+  // 商品分类表
+  goodsCategories: 'sf-goods-categories',
   // 订单表
   orders: 'sf-orders',
   // 卡密表

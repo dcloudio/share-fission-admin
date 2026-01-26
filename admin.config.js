@@ -76,6 +76,36 @@ export default {
           value: '/pages/sf-admin/fund-pool-logs/list',
         },
         {
+          menu_id: "sf-admin-goods-list",
+          text: '商品管理',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/goods/list',
+        },
+        {
+          menu_id: "sf-admin-goods-categories-list",
+          text: '商品分类',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/goods-categories/list',
+        },
+        {
+          menu_id: "sf-admin-card-keys-list",
+          text: '卡密管理',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/card-keys/list',
+        },
+        {
+          menu_id: "sf-admin-orders-list",
+          text: '订单管理',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/orders/list',
+        },
+        {
+          menu_id: "sf-admin-daily-statistics-list",
+          text: '每日统计',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/daily-statistics/list',
+        },
+        {
           menu_id: "sf-admin-config-form",
           text: '系统配置',
           icon: 'admin-icons-icon',

@@ -189,6 +189,31 @@
         	"style": {
         		"navigationBarTitleText": "资金池流水"
         	}
+      }, {
+        	"path": "goods/list",
+        	"style": {
+        		"navigationBarTitleText": "商品管理"
+        	}
+      }, {
+        	"path": "card-keys/list",
+        	"style": {
+        		"navigationBarTitleText": "卡密管理"
+        	}
+      }, {
+        	"path": "goods-categories/list",
+        	"style": {
+        		"navigationBarTitleText": "商品分类"
+        	}
+      }, {
+        	"path": "orders/list",
+        	"style": {
+        		"navigationBarTitleText": "订单管理"
+        	}
+      }, {
+        	"path": "daily-statistics/list",
+        	"style": {
+        		"navigationBarTitleText": "每日统计"
+        	}
       }]
     },
     {

@@ -5,6 +5,11 @@ const scores = require('./scores');
 const withdrawalLogs = require('./withdrawalLogs');
 const adWatchLogs = require('./adWatchLogs');
 const fundPoolLogs = require('./fundPoolLogs');
+const goods = require('./goods');
+const cardKeys = require('./cardKeys');
+const goodsCategories = require('./goodsCategories');
+const orders = require('./orders');
+const dailyStatistics = require('./dailyStatistics');
 module.exports = {
   config,
   demo,
@@ -12,5 +17,10 @@ module.exports = {
   scores,
   withdrawalLogs,
   adWatchLogs,
-  fundPoolLogs
+  fundPoolLogs,
+  goods,
+  cardKeys,
+  goodsCategories,
+  orders,
+  dailyStatistics
 };
