@@ -1,25 +1,27 @@
+const { fail } = require('./libs/response');
+
 module.exports = async function(params = {}) {
   const {
     name,
     data
   } = params;
   if (!name) {
-    return { errCode: "param-required", errMsgValue: { param: "name" } }
+    return fail(400001, { name: 'name' })
   }
   const [group, moduleName, method] = name.split("/");
   if (!group || !moduleName || !method) {
-    return { errCode: "invalid-param-name", errMsgValue: { param: name } }
+    return fail(400002, { name: 'name' })
   }
   let action;
   try {
     action = require(`./module/${group}/${moduleName}`);
   } catch (err) {
     console.error(`加载${group}/${moduleName}模块失败: `, err)
-    return { errCode: "invalid-module", errMsgValue: { moduleName } }
+    return fail(404001, { name: `模块${moduleName}` })
   }
   const main = action[method];
   if (!main || typeof main !== "function") {
-    return { errCode: "invalid-module-method", errMsgValue: { moduleName, method } }
+    return fail(404001, { name: `方法${moduleName}.${method}` })
   }
   let res;
   try {

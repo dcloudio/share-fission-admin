@@ -4,7 +4,8 @@
 const db = uniCloud.database();
 const _ = db.command;
 
-const collection = db.collection("uni-id-users");
+const { Tables } = require('../constants');
+const collection = db.collection(Tables.users);
 
 module.exports = {
   /**

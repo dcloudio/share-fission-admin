@@ -2,8 +2,7 @@
  * 系统配置 - 模块层
  */
 const service = require('../../service');
-const libs = require('../../libs');
-const fail = libs.response.fail;
+const { fail } = require('../../libs/response');
 
 module.exports = {
   // 函数执行前钩子
@@ -35,7 +34,7 @@ module.exports = {
   async update(data = {}) {
     // 简单校验
     if (typeof data !== 'object') {
-      return fail('Invalid data');
+      return fail(400002, { name: 'data' });
     }
     return await service.config.update(data);
   }

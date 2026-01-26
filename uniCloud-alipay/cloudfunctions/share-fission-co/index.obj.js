@@ -3,6 +3,8 @@ const uniIdCommon = require('uni-id-common')
 // 加载全局中间件
 const middleware = require('./middleware');
 
+const crontab = require('./crontab')
+
 module.exports = {
   // 函数执行前钩子
   async _before() {
@@ -36,26 +38,15 @@ module.exports = {
     return result
   },
   // 定时任务
-  _timing: async function(event) {
-    let cloudInfo = uniCloud.getCloudInfos();
-    console.log('timing------', cloudInfo);
-    console.log('event------', event);
-    this.source = 'crontab';
-    //加载校验组件
-    this.validator = new Validator();
-    // 挂载中间件
-    this.middleware = {}
-    for (const mwName in middleware) {
-      this.middleware[mwName] = middleware[mwName].bind(this);
+  _timing: crontab,
+  // 主动触发定时任务（仅本地可用）
+  async crontab(event) {
+    const { RUNTIME_ENV } = this.getClientInfo();
+    if (RUNTIME_ENV !== "local") {
+      return;
     }
-    const smsServerCrontabs = require('./crontab');
-    if (smsServerCrontabs[event.TriggerName]) {
-      console.log('--trigger', event.TriggerName);
-      smsServerCrontabs[event.TriggerName].bind(this)({});
-    }
+    return await crontab.call(this, event);
   },
   // 加载自定义函数模块
   action: require('./index.action.js'),
-  // 加载定时任务（便于手动触发）
-  crontab: require('./index.crontab.js')
 }

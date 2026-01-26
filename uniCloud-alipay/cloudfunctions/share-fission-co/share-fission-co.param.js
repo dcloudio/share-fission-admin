@@ -1,11 +1,11 @@
 action({
-  name: "demo.getList",
+  name: "admin/demo/getList",
   data: {
     a: 1
   }
 });
 
 // crontab({
-//   name: "test",
+//   name: "demo",
 //   a: 1
 // })

@@ -5,8 +5,8 @@ const db = uniCloud.database();
 const _ = db.command;
 const $ = _.aggregate;
 
-const libs = require('../libs');
-const collection = db.collection("sf-system-config");
+const { Tables } = require('../constants');
+const collection = db.collection(Tables.systemConfig);
 
 const CONFIG_ID = 'main';
 

@@ -5,8 +5,8 @@ const db = uniCloud.database();
 const _ = db.command;
 const $ = _.aggregate;
 
-const libs = require('../libs');
-const collection = db.collection("sf-demo-employee");
+const { Tables } = require('../constants');
+const collection = db.collection(Tables.demoEmployee);
 
 module.exports = {
   /**
