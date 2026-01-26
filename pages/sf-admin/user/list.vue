@@ -90,7 +90,7 @@
                 <template v-else-if="column.key === 'last_login_date'">
                   {{ formatDate(rowData.last_login_date) }}
                 </template>
-                <template v-else-if="column.key === 'score_balance' || column.key === 'score_total' || column.key === 'score_withdrawn'">
+                <template v-else-if="column.key === 'score' || column.key === 'score_total' || column.key === 'score_withdrawn'">
                   {{ formatNumber(rowData[column.key]) }}
                 </template>
                 <template v-else-if="column.key === 'actions'">
@@ -134,7 +134,7 @@
               </view>
               <view class="info-row">
                 <text class="label">积分余额</text>
-                <text class="value">{{ formatNumber(item.score_balance) }}</text>
+                <text class="value">{{ formatNumber(item.score) }}</text>
               </view>
               <view class="info-row">
                 <text class="label">累计积分</text>
