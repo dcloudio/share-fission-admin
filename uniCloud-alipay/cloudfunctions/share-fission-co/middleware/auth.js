@@ -1,3 +1,5 @@
+const { fail } = require('../libs/response');
+
 module.exports = async function(useThrow = true) {
   if (this.authInfo) { // 多次执行auth时如果第一次成功后续不再执行
     return;
@@ -12,8 +14,10 @@ module.exports = async function(useThrow = true) {
   }
   const payload = await this.uniIdCommon.checkToken(token);
   if (payload.errCode) {
+    // 使用统一错误码 401001: 登录已过期，请重新登录
+    const error = fail(401001);
     if (useThrow) {
-      throw payload;
+      throw error;
     } else {
       return;
     }

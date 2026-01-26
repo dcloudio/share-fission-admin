@@ -14,6 +14,27 @@ function replaceVars(template, vars) {
 }
 
 /**
+ * 生成成功响应
+ * @param {Object} [data={}] - 返回的数据
+ * @returns {Object} 成功响应对象
+ *
+ * @example
+ * // 返回数据
+ * success({ list: [], total: 0 })
+ * // 输出: { errCode: 0, list: [], total: 0 }
+ *
+ * // 无数据
+ * success()
+ * // 输出: { errCode: 0 }
+ */
+function success(data = {}) {
+  if (typeof data === "object") {
+    data.errCode = 0;
+  }
+  return data;
+}
+
+/**
  * 生成失败响应
  * @param {number} errCode - 错误码
  * @param {string|Object} [msgOrVars] - 错误消息字符串 或 变量对象
@@ -51,5 +72,6 @@ function fail(errCode, msgOrVars) {
 }
 
 module.exports = {
+  success,
   fail
 }
