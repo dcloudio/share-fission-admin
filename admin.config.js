@@ -64,6 +64,12 @@ export default {
           value: '/pages/sf-admin/withdrawal-logs/list',
         },
         {
+          menu_id: "sf-admin-ad-watch-logs-list",
+          text: '广告观看记录',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/ad-watch-logs/list',
+        },
+        {
           menu_id: "sf-admin-config-form",
           text: '系统配置',
           icon: 'admin-icons-icon',

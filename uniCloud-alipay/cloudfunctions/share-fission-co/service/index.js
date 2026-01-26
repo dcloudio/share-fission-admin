@@ -3,10 +3,12 @@ const demo = require('./demo');
 const user = require('./user');
 const scores = require('./scores');
 const withdrawalLogs = require('./withdrawalLogs');
+const adWatchLogs = require('./adWatchLogs');
 module.exports = {
   config,
   demo,
   user,
   scores,
-  withdrawalLogs
+  withdrawalLogs,
+  adWatchLogs
 };

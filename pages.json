@@ -179,6 +179,11 @@
         	"style": {
         		"navigationBarTitleText": "提现管理"
         	}
+      }, {
+        	"path": "ad-watch-logs/list",
+        	"style": {
+        		"navigationBarTitleText": "广告观看记录"
+        	}
       }]
     },
     {

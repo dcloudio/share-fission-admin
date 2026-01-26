@@ -41,3 +41,4 @@
 - 弹窗只在操作成功时关闭，失败时保持打开状态
 - 移动端适配使用 `.pc-only` 和 `.mobile-only` 控制显示
 - 列配置的宽度请勿 `minWidth`，统一使用 `width`
+- 【重要】新加的页面需要在 `admin.config.js` 的 `staticMenu` 属性中增加菜单，统一都是  `sf-admin` 菜单的子菜单（菜单最多创建三级，`sf-admin` 自身作为第一级）
