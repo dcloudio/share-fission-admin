@@ -200,7 +200,8 @@ const sourceMap = {
   'exchange': '兑换商品',
   'withdraw': '提现',
   'withdraw_fee_return': '提现手续费返还',
-  'admin_adjust': '管理员调整'
+  'admin_adjust': '管理员调整',
+  'withdraw_refund': '提现拒绝后退还'
 }
 
 // ========== 状态 ==========
@@ -298,7 +299,8 @@ const getSourceType = (source) => {
     'exchange': 'info',
     'withdraw': 'danger',
     'withdraw_fee_return': 'success',
-    'admin_adjust': ''
+    'admin_adjust': '',
+    'withdraw_refund': 'warning'
   }
   return map[source] || 'info'
 }
