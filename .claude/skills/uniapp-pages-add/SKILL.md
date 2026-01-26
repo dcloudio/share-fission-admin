@@ -161,9 +161,9 @@ onLoad((options) => {
 | `uni-group` | 按钮组容器 |
 
 ## 注意事项
+- 【重要】新加的页面需要在 `admin.config.js` 的 `staticMenu` 属性中增加菜单，统一都是  `sf-admin` 菜单的子菜单（菜单最多创建三级，`sf-admin` 自身作为第一级）
 - 页面路径不带 `.vue` 后缀
 - 首页必须放在 `pages` 数组第一位
 - 使用 Vue3 Composition API + `<script setup>` 语法
 - 页面文件使用小写 + 连字符命名
 - **避免重复注册**: 确保同一个页面路径只出现一次 (不要同时在 `pages` 和 `subPackages` 中注册，也不要在多个分包中注册同一个文件)
-- 新加的页面需要在 `admin.config.js` 的 `staticMenu` 属性中增加菜单，统一都是  `sf-admin` 菜单的子菜单（菜单最多创建三级，`sf-admin` 自身作为第一级）

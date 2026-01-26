@@ -58,6 +58,12 @@ export default {
           value: '/pages/sf-admin/scores/list',
         },
         {
+          menu_id: "sf-admin-withdrawal-logs-list",
+          text: '提现管理',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/withdrawal-logs/list',
+        },
+        {
           menu_id: "sf-admin-config-form",
           text: '系统配置',
           icon: 'admin-icons-icon',
