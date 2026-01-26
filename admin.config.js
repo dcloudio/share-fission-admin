@@ -45,71 +45,51 @@ export default {
       text: '分销裂变',
       icon: 'admin-icons-kaifashili',
       url: "",
-      children: [{
-          menu_id: "sf-admin-user-list",
-          text: '用户管理',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/user/list',
-        },
+      children: [
         {
-          menu_id: "sf-admin-scores-list",
-          text: '积分记录',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/scores/list',
-        },
-        {
-          menu_id: "sf-admin-withdrawal-logs-list",
-          text: '提现管理',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/withdrawal-logs/list',
-        },
-        {
-          menu_id: "sf-admin-ad-watch-logs-list",
-          text: '广告观看记录',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/ad-watch-logs/list',
-        },
-        {
-          menu_id: "sf-admin-fund-pool-logs-list",
-          text: '资金池流水',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/fund-pool-logs/list',
-        },
-        {
-          menu_id: "sf-admin-goods-list",
-          text: '商品管理',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/goods/list',
-        },
-        {
-          menu_id: "sf-admin-goods-categories-list",
-          text: '商品分类',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/goods-categories/list',
-        },
-        {
-          menu_id: "sf-admin-card-keys-list",
-          text: '卡密管理',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/card-keys/list',
-        },
-        {
-          menu_id: "sf-admin-orders-list",
-          text: '订单管理',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/orders/list',
-        },
-        {
-          menu_id: "sf-admin-daily-statistics-list",
+          menu_id: "sf-admin-system",
           text: '每日统计',
           icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/daily-statistics/list',
+          value: '/pages/sf-admin/daily-statistics/list'
         },
         {
-          menu_id: "sf-admin-config-form",
-          text: '系统配置',
+          menu_id: "sf-admin-user",
+          text: '用户管理',
           icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/config/form',
+          value: "/pages/sf-admin/user/list"
+        },
+        {
+          menu_id: "sf-admin-finance",
+          text: '财务管理',
+          icon: 'admin-icons-icon',
+          children: [
+            { menu_id: "sf-admin-scores-list", text: '积分记录', value: '/pages/sf-admin/scores/list' },
+            { menu_id: "sf-admin-withdrawal-logs-list", text: '提现管理', value: '/pages/sf-admin/withdrawal-logs/list' },
+            { menu_id: "sf-admin-fund-pool-logs-list", text: '资金池流水', value: '/pages/sf-admin/fund-pool-logs/list' }
+          ]
+        },
+        {
+          menu_id: "sf-admin-ad",
+          text: '广告观看记录',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/ad-watch-logs/list'
+        },
+        {
+          menu_id: "sf-admin-shop",
+          text: '积分商城管理',
+          icon: 'admin-icons-icon',
+          children: [
+            { menu_id: "sf-admin-goods-list", text: '商品管理', value: '/pages/sf-admin/goods/list' },
+            { menu_id: "sf-admin-goods-categories-list", text: '商品分类', value: '/pages/sf-admin/goods-categories/list' },
+            { menu_id: "sf-admin-card-keys-list", text: '卡密管理', value: '/pages/sf-admin/card-keys/list' },
+            { menu_id: "sf-admin-orders-list", text: '订单管理', value: '/pages/sf-admin/orders/list' }
+          ]
+        },
+        {
+          menu_id: "sf-admin-system",
+          text: '系统设置',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/config/form'
         }
       ]
     }, {
