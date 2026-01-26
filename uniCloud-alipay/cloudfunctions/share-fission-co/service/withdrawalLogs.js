@@ -1,5 +1,7 @@
 /**
  * 提现记录 - 服务实现层
+ * @module service/withdrawalLogs
+ * @description 用户提现申请管理模块，提供提现记录查询、审核、打款等功能
  */
 const db = uniCloud.database();
 const _ = db.command;
@@ -10,16 +12,81 @@ const collection = db.collection(Tables.withdrawalLogs);
 const usersCollection = db.collection(Tables.users);
 const scoresCollection = db.collection(Tables.scores);
 
+/**
+ * @typedef {Object} AccountInfo
+ * @property {string} type - 账户类型（如：alipay, wechat, bank）
+ * @property {string} account - 账号
+ * @property {string} name - 账户姓名
+ */
+
+/**
+ * @typedef {Object} WithdrawalRecord
+ * @property {string} [_id] - 记录ID
+ * @property {string} user_id - 用户ID
+ * @property {number} score - 提现积分数量
+ * @property {number} amount - 提现金额（元）
+ * @property {AccountInfo} account_info - 收款账户信息
+ * @property {number} status - 状态（0:待审核 1:审核通过 2:审核拒绝 3:已打款）
+ * @property {string} [reject_reason] - 拒绝原因（状态为2时存在）
+ * @property {number} [create_time] - 申请时间戳（毫秒）
+ * @property {number} [audit_time] - 审核时间戳（毫秒）
+ * @property {number} [pay_time] - 打款时间戳（毫秒）
+ */
+
+/**
+ * @typedef {Object} WithdrawalListQueryParams
+ * @property {number} [pageIndex=1] - 页码，从1开始
+ * @property {number} [pageSize=20] - 每页条数
+ * @property {string} [keyword=''] - 搜索关键词，支持按用户ID、账号、姓名搜索
+ * @property {number} [status] - 状态筛选（0:待审核 1:审核通过 2:审核拒绝 3:已打款）
+ * @property {string} [sortField='create_time'] - 排序字段
+ * @property {string} [sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+ */
+
+/**
+ * @typedef {Object} WithdrawalListResult
+ * @property {WithdrawalRecord[]} list - 提现记录列表
+ * @property {number} total - 总记录数
+ */
+
+/**
+ * 提现状态枚举
+ * @readonly
+ * @enum {number}
+ */
+const WithdrawalStatus = {
+  /** 待审核 */
+  PENDING: 0,
+  /** 审核通过 */
+  APPROVED: 1,
+  /** 审核拒绝 */
+  REJECTED: 2,
+  /** 已打款 */
+  PAID: 3
+};
+
 module.exports = {
   /**
-   * 分页查询列表
-   * @param {Object} data
-   * @param {number} data.pageIndex - 页码
-   * @param {number} data.pageSize - 每页条数
-   * @param {string} data.keyword - 搜索关键词
-   * @param {number} data.status - 状态筛选
-   * @param {string} data.sortField - 排序字段
-   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
+   * 分页查询提现记录列表
+   * @async
+   * @function getList
+   * @description 支持状态筛选、关键词搜索（用户ID、账号、姓名）、自定义排序和分页。
+   * 默认按创建时间倒序排列
+   * @param {WithdrawalListQueryParams} [data={}] - 查询参数对象
+   * @param {number} [data.pageIndex=1] - 页码，从1开始
+   * @param {number} [data.pageSize=20] - 每页条数
+   * @param {string} [data.keyword=''] - 搜索关键词，支持按用户ID、账号、姓名搜索
+   * @param {number} [data.status] - 状态筛选（0:待审核 1:审核通过 2:审核拒绝 3:已打款）
+   * @param {string} [data.sortField='create_time'] - 排序字段
+   * @param {string} [data.sortOrder='desc'] - 排序方向
+   * @returns {Promise<WithdrawalListResult>} 返回提现记录列表和总数
+   * @example
+   * // 查询待审核的提现申请
+   * const result = await withdrawalLogsService.getList({
+   *   status: 0,
+   *   pageIndex: 1,
+   *   pageSize: 20
+   * });
    */
   async getList(data = {}) {
     let { pageIndex = 1, pageSize = 20, keyword = '', status, sortField = 'create_time', sortOrder = 'desc' } = data;
@@ -75,9 +142,13 @@ module.exports = {
   },
 
   /**
-   * 获取单条记录
-   * @param {string} _id - 记录 ID
-   * @returns {Promise<Object|undefined>} 记录详情
+   * 根据ID获取单条提现记录
+   * @async
+   * @function getById
+   * @param {string} _id - 记录ID
+   * @returns {Promise<WithdrawalRecord|undefined>} 提现记录详情，如果不存在则返回 undefined
+   * @example
+   * const record = await withdrawalLogsService.getById('xxx');
    */
   async getById(_id) {
     const { data: [info] } = await collection.doc(_id).get();
@@ -86,10 +157,21 @@ module.exports = {
 
   /**
    * 审核提现申请
-   * @param {string} _id - 记录 ID
-   * @param {number} status - 状态 1=通过 2=拒绝
-   * @param {string} reject_reason - 拒绝原因（拒绝时必填）
+   * @async
+   * @function audit
+   * @description 审核提现申请，支持通过或拒绝。拒绝时会自动退还积分并创建退还记录
+   * @param {string} _id - 记录ID
+   * @param {number} status - 审核状态（1:通过 2:拒绝）
+   * @param {string} [reject_reason] - 拒绝原因（拒绝时必填）
    * @returns {Promise<{updated: number}>} 更新的记录数
+   * @throws {Error} 记录不存在
+   * @throws {Error} 该记录已审核，不可重复操作
+   * @example
+   * // 审核通过
+   * await withdrawalLogsService.audit('xxx', 1);
+   *
+   * // 审核拒绝
+   * await withdrawalLogsService.audit('xxx', 2, '账户信息有误');
    */
   async audit(_id, status, reject_reason) {
     // 检查当前状态
@@ -121,9 +203,14 @@ module.exports = {
   },
 
   /**
-   * 退还积分（拒绝提现时调用）
-   * @param {Object} record - 提现记录
+   * 退还积分（内部方法，拒绝提现时调用）
+   * @async
+   * @function _refundScore
    * @private
+   * @description 拒绝提现时退还用户积分，并创建积分变动记录。
+   * 更新用户的 score（增加）和 score_withdrawn（减少）字段
+   * @param {WithdrawalRecord} record - 提现记录对象
+   * @throws {Error} 用户不存在
    */
   async _refundScore(record) {
     const { user_id, score, _id: withdrawal_id } = record;
@@ -158,8 +245,15 @@ module.exports = {
 
   /**
    * 确认打款
-   * @param {string} _id - 记录 ID
+   * @async
+   * @function pay
+   * @description 将已通过审核的提现申请标记为已打款
+   * @param {string} _id - 记录ID
    * @returns {Promise<{updated: number}>} 更新的记录数
+   * @throws {Error} 记录不存在
+   * @throws {Error} 只有已通过审核的记录才能打款
+   * @example
+   * await withdrawalLogsService.pay('xxx');
    */
   async pay(_id) {
     // 检查当前状态

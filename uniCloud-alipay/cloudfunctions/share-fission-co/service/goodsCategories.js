@@ -1,5 +1,7 @@
 /**
  * 商品分类表 - 服务实现层
+ * @module service/goodsCategories
+ * @description 商品分类管理模块，支持多级分类（最多两级），提供分类的增删改查功能
  */
 const db = uniCloud.database();
 const _ = db.command;
@@ -9,16 +11,65 @@ const { Tables } = require('../constants');
 const libs = require('../libs');
 const collection = db.collection(Tables.goodsCategories);
 
+/**
+ * @typedef {Object} GoodsCategory
+ * @property {string} [_id] - 分类ID
+ * @property {string} name - 分类名称
+ * @property {string} [parent_id] - 父分类ID，空字符串或不存在表示顶级分类
+ * @property {string} [parent_name] - 父分类名称（查询列表时关联获取）
+ * @property {number} [level=1] - 分类层级（1:一级分类 2:二级分类）
+ * @property {number} [sort=0] - 排序值，值越小越靠前
+ * @property {number} [status=1] - 状态（0:禁用 1:启用）
+ * @property {number} [create_time] - 创建时间戳（毫秒）
+ * @property {number} [update_time] - 更新时间戳（毫秒）
+ */
+
+/**
+ * @typedef {Object} CategoryListQueryParams
+ * @property {number} [pageIndex=1] - 页码，从1开始
+ * @property {number} [pageSize=20] - 每页条数
+ * @property {string} [keyword=''] - 搜索关键词（按分类名称或ID搜索）
+ * @property {string} [parent_id=''] - 父分类ID筛选，'top' 表示只查顶级分类
+ * @property {string} [sortField='sort'] - 排序字段
+ * @property {string} [sortOrder='asc'] - 排序方向，'asc' 升序 | 'desc' 降序
+ */
+
+/**
+ * @typedef {Object} CategoryListResult
+ * @property {GoodsCategory[]} list - 分类列表（包含 parent_name 字段）
+ * @property {number} total - 总记录数
+ */
+
+/**
+ * @typedef {Object} ParentCategoryListResult
+ * @property {GoodsCategory[]} list - 一级分类列表（仅包含 _id 和 name）
+ */
+
 module.exports = {
   /**
-   * 分页查询列表
-   * @param {Object} data
-   * @param {number} data.pageIndex - 页码
-   * @param {number} data.pageSize - 每页条数
-   * @param {string} data.keyword - 搜索关键词
-   * @param {string} data.parent_id - 父分类ID筛选（'top' 表示顶级分类）
-   * @param {string} data.sortField - 排序字段
-   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
+   * 分页查询分类列表
+   * @async
+   * @function getList
+   * @description 支持关键词搜索、父分类筛选、自定义排序和分页。
+   * 返回结果会关联查询父分类名称。默认按排序值升序排列
+   * @param {CategoryListQueryParams} [data={}] - 查询参数对象
+   * @param {number} [data.pageIndex=1] - 页码，从1开始
+   * @param {number} [data.pageSize=20] - 每页条数
+   * @param {string} [data.keyword=''] - 搜索关键词，支持按分类名称或ID搜索
+   * @param {string} [data.parent_id=''] - 父分类ID筛选，'top' 表示只查顶级分类
+   * @param {string} [data.sortField='sort'] - 排序字段，默认 sort
+   * @param {string} [data.sortOrder='asc'] - 排序方向，默认升序
+   * @returns {Promise<CategoryListResult>} 返回分类列表和总数
+   * @example
+   * // 查询所有顶级分类
+   * const result = await goodsCategoriesService.getList({
+   *   parent_id: 'top'
+   * });
+   *
+   * // 查询某个父分类下的子分类
+   * const result = await goodsCategoriesService.getList({
+   *   parent_id: 'xxx'
+   * });
    */
   async getList(data = {}) {
     let { pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', sortField = 'sort', sortOrder = 'asc' } = data;
@@ -82,7 +133,14 @@ module.exports = {
   },
 
   /**
-   * 获取父分类列表（用于下拉选择，只返回一级分类）
+   * 获取父分类列表（用于下拉选择）
+   * @async
+   * @function getParentList
+   * @description 获取所有启用状态的一级分类，用于创建/编辑分类时的父分类下拉选择
+   * @returns {Promise<ParentCategoryListResult>} 返回一级分类列表
+   * @example
+   * const { list } = await goodsCategoriesService.getParentList();
+   * // list: [{ _id: 'xxx', name: '电子产品' }, ...]
    */
   async getParentList() {
     // 只获取顶级分类作为可选父分类
@@ -97,9 +155,13 @@ module.exports = {
   },
 
   /**
-   * 获取单条记录
-   * @param {string} _id - 记录 ID
-   * @returns {Promise<Object|undefined>} 记录详情
+   * 根据ID获取单条分类记录
+   * @async
+   * @function getById
+   * @param {string} _id - 分类ID
+   * @returns {Promise<GoodsCategory|undefined>} 分类详情，如果不存在则返回 undefined
+   * @example
+   * const category = await goodsCategoriesService.getById('xxx');
    */
   async getById(_id) {
     const { data: [info] } = await collection.doc(_id).get();
@@ -107,13 +169,29 @@ module.exports = {
   },
 
   /**
-   * 新增记录
-   * @param {Object} data - 分类数据
-   * @param {string} [data.parent_id] - 父分类ID
-   * @param {string} data.name - 分类名称
-   * @param {number} [data.sort] - 排序值
-   * @param {number} [data.status] - 状态
-   * @returns {Promise<{id: string}>} 新增记录的 ID
+   * 新增分类记录
+   * @async
+   * @function add
+   * @description 创建新分类，会自动计算层级（根据父分类）。
+   * 如果指定了 parent_id 但父分类不存在，则创建为一级分类
+   * @param {Object} [data={}] - 分类数据对象
+   * @param {string} data.name - 分类名称（必填）
+   * @param {string} [data.parent_id=''] - 父分类ID，不填则为一级分类
+   * @param {number} [data.sort=0] - 排序值
+   * @param {number} [data.status=1] - 状态（0:禁用 1:启用）
+   * @returns {Promise<{id: string}>} 包含新增分类ID的对象
+   * @example
+   * // 创建一级分类
+   * const result = await goodsCategoriesService.add({
+   *   name: '电子产品',
+   *   sort: 1
+   * });
+   *
+   * // 创建二级分类
+   * const result = await goodsCategoriesService.add({
+   *   name: '手机',
+   *   parent_id: 'xxx'
+   * });
    */
   async add(data = {}) {
     const { _id, create_time, update_time, level, ...record } = data;
@@ -141,10 +219,22 @@ module.exports = {
   },
 
   /**
-   * 更新记录
-   * @param {string} _id - 记录 ID
-   * @param {Object} data - 更新数据
-   * @returns {Promise<{updated: number}>} 更新的记录数
+   * 更新分类记录
+   * @async
+   * @function update
+   * @description 根据ID更新分类信息。如果修改了父分类，会自动重新计算层级
+   * @param {string} _id - 分类ID
+   * @param {Object} [data={}] - 要更新的数据
+   * @param {string} [data.name] - 分类名称
+   * @param {string} [data.parent_id] - 父分类ID
+   * @param {number} [data.sort] - 排序值
+   * @param {number} [data.status] - 状态（0:禁用 1:启用）
+   * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
+   * @example
+   * await goodsCategoriesService.update('xxx', {
+   *   name: '新名称',
+   *   sort: 2
+   * });
    */
   async update(_id, data = {}) {
     const { _id: __, create_time, level, ...rest } = data;
@@ -172,9 +262,18 @@ module.exports = {
   },
 
   /**
-   * 删除记录（支持批量，同时删除子分类）
-   * @param {string|string[]} ids - 单个 ID 或 ID 数组
-   * @returns {Promise<{deleted: number}>} 删除的记录数
+   * 删除分类记录（支持批量，级联删除子分类）
+   * @async
+   * @function remove
+   * @description 根据ID删除分类，会递归删除所有子分类
+   * @param {string|string[]} ids - 单个分类ID或ID数组
+   * @returns {Promise<{deleted: number}>} 删除的记录数（包含子分类）
+   * @example
+   * // 删除单个分类（及其所有子分类）
+   * await goodsCategoriesService.remove('xxx');
+   *
+   * // 批量删除
+   * await goodsCategoriesService.remove(['id1', 'id2']);
    */
   async remove(ids) {
     if (!Array.isArray(ids)) ids = [ids];

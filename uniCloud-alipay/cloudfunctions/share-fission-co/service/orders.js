@@ -1,5 +1,8 @@
 /**
  * 订单表 - 服务实现层
+ * @module service/orders
+ * @description 订单管理模块，提供订单查询、卡密获取、订单退款等功能。
+ * 使用聚合查询关联用户信息，支持事务处理退款操作
  */
 const db = uniCloud.database();
 const _ = db.command;
@@ -12,16 +15,93 @@ const cardKeysCollection = db.collection(Tables.cardKeys);
 const usersCollection = db.collection(Tables.users);
 const scoresCollection = db.collection(Tables.scores);
 
+/**
+ * @typedef {Object} GoodsInfo
+ * @property {string} _id - 商品ID
+ * @property {string} name - 商品名称
+ * @property {number} price - 商品价格（积分）
+ * @property {string} [image] - 商品图片
+ */
+
+/**
+ * @typedef {Object} Order
+ * @property {string} [_id] - 订单ID
+ * @property {string} order_no - 订单号
+ * @property {string} user_id - 用户ID
+ * @property {string} [user_nickname] - 用户昵称（聚合查询时关联获取）
+ * @property {GoodsInfo} goods_info - 商品信息快照
+ * @property {string} [goods_name] - 商品名称（从 goods_info 中提取）
+ * @property {number} score_cost - 消耗积分数量
+ * @property {string} status - 订单状态（pending:待支付 complete:已完成 cancel:已取消）
+ * @property {string} [card_key_id] - 关联的卡密ID
+ * @property {number} [create_time] - 创建时间戳（毫秒）
+ * @property {number} [update_time] - 更新时间戳（毫秒）
+ */
+
+/**
+ * @typedef {Object} OrderListQueryParams
+ * @property {number} [pageIndex=1] - 页码，从1开始
+ * @property {number} [pageSize=20] - 每页条数
+ * @property {string} [keyword=''] - 搜索关键词（订单号、商品名称）
+ * @property {string} [status=''] - 订单状态筛选
+ * @property {string} [sortField=''] - 排序字段
+ * @property {string} [sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+ */
+
+/**
+ * @typedef {Object} OrderListResult
+ * @property {Order[]} list - 订单列表（包含 goods_name 和 user_nickname 字段）
+ * @property {number} total - 总记录数
+ */
+
+/**
+ * @typedef {Object} CardKey
+ * @property {string} [_id] - 卡密ID
+ * @property {string} goods_id - 商品ID
+ * @property {string} card_no - 卡号
+ * @property {string} [card_pwd] - 卡密
+ * @property {string} [exchange_url] - 兑换地址
+ * @property {number} status - 状态（0:未发放 1:已发放）
+ * @property {string} [order_id] - 关联订单ID
+ * @property {number} [used_time] - 使用时间戳
+ */
+
+/**
+ * 订单状态枚举
+ * @readonly
+ * @enum {string}
+ */
+const OrderStatus = {
+  /** 待支付 */
+  PENDING: 'pending',
+  /** 已完成 */
+  COMPLETE: 'complete',
+  /** 已取消 */
+  CANCEL: 'cancel'
+};
+
 module.exports = {
   /**
    * 分页查询订单列表
-   * @param {Object} data
-   * @param {number} data.pageIndex - 页码
-   * @param {number} data.pageSize - 每页条数
-   * @param {string} data.keyword - 搜索关键词（订单号、商品名称）
-   * @param {string} data.status - 订单状态筛选
-   * @param {string} data.sortField - 排序字段
-   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
+   * @async
+   * @function getList
+   * @description 使用聚合管道查询订单列表，关联用户表获取昵称。
+   * 支持关键词搜索（订单号、商品名称）、状态筛选、自定义排序和分页。
+   * 默认按创建时间倒序排列
+   * @param {OrderListQueryParams} [data={}] - 查询参数对象
+   * @param {number} [data.pageIndex=1] - 页码，从1开始
+   * @param {number} [data.pageSize=20] - 每页条数
+   * @param {string} [data.keyword=''] - 搜索关键词，支持订单号、商品名称搜索
+   * @param {string} [data.status=''] - 订单状态筛选
+   * @param {string} [data.sortField=''] - 排序字段，为空时默认按 create_time 倒序
+   * @param {string} [data.sortOrder='desc'] - 排序方向
+   * @returns {Promise<OrderListResult>} 返回订单列表和总数
+   * @example
+   * // 查询已完成的订单
+   * const result = await ordersService.getList({
+   *   status: 'complete',
+   *   pageSize: 10
+   * });
    */
   async getList(data = {}) {
     let { pageIndex = 1, pageSize = 20, keyword = '', status = '', sortField = '', sortOrder = 'desc' } = data;
@@ -122,8 +202,18 @@ module.exports = {
 
   /**
    * 获取订单关联的卡密信息
+   * @async
+   * @function getCardKey
+   * @description 根据订单ID获取关联的卡密信息。优先通过订单中的 card_key_id 查询，
+   * 如果不存在则通过 order_id 反查卡密表
    * @param {string} order_id - 订单ID
-   * @returns {Promise<Object|null>} 卡密信息
+   * @returns {Promise<CardKey|null>} 卡密信息，如果不存在则返回 null
+   * @throws {Error} 订单不存在
+   * @example
+   * const cardKey = await ordersService.getCardKey('xxx');
+   * if (cardKey) {
+   *   console.log(cardKey.card_no, cardKey.card_pwd);
+   * }
    */
   async getCardKey(order_id) {
     // 先获取订单信息
@@ -145,8 +235,28 @@ module.exports = {
 
   /**
    * 订单退款
+   * @async
+   * @function refund
+   * @description 对已完成的订单进行退款操作。使用数据库事务确保数据一致性，包括：
+   * 1. 更新订单状态为已取消
+   * 2. 退还用户积分
+   * 3. 创建积分变动记录
+   * 4. 释放关联的卡密（如果有）
    * @param {string} order_id - 订单ID
-   * @returns {Promise<{success: boolean}>}
+   * @returns {Promise<{success: boolean}>} 退款结果
+   * @throws {Error} 订单不存在
+   * @throws {Error} 只有已完成的订单才能退款
+   * @throws {Error} 用户不存在
+   * @throws {Error} 退款失败：[具体错误信息]
+   * @example
+   * try {
+   *   const result = await ordersService.refund('xxx');
+   *   if (result.success) {
+   *     console.log('退款成功');
+   *   }
+   * } catch (e) {
+   *   console.error('退款失败:', e.message);
+   * }
    */
   async refund(order_id) {
     // 获取订单信息

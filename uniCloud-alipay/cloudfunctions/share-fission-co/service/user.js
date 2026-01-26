@@ -1,5 +1,7 @@
 /**
  * 用户表 (uni-id-users) - 服务实现层
+ * @module service/user
+ * @description 用户管理模块，提供用户信息的增删改查功能，支持手机号/邮箱唯一性校验
  */
 const db = uniCloud.database();
 const _ = db.command;
@@ -8,15 +10,72 @@ const { Tables } = require('../constants');
 const libs = require('../libs');
 const collection = db.collection(Tables.users);
 
+/**
+ * @typedef {Object} User
+ * @property {string} [_id] - 用户ID
+ * @property {string} username - 用户名
+ * @property {string} [nickname] - 昵称
+ * @property {string} [avatar] - 头像 URL
+ * @property {string} [mobile] - 手机号
+ * @property {number} [mobile_confirmed] - 手机号是否已确认（0:未确认 1:已确认）
+ * @property {string} [email] - 邮箱
+ * @property {number} [email_confirmed] - 邮箱是否已确认（0:未确认 1:已确认）
+ * @property {number} [status=0] - 用户状态（0:正常 1:禁用 2:审核中 3:审核拒绝）
+ * @property {number} [score] - 用户积分
+ * @property {number} [register_date] - 注册时间戳（毫秒）
+ */
+
+/**
+ * @typedef {Object} UserListQueryParams
+ * @property {number} [pageIndex=1] - 页码，从1开始
+ * @property {number} [pageSize=20] - 每页条数
+ * @property {string} [keyword=''] - 搜索关键词，支持按ID、用户名、昵称、手机号搜索
+ * @property {string} [sortField=''] - 排序字段
+ * @property {string} [sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+ */
+
+/**
+ * @typedef {Object} UserListResult
+ * @property {User[]} list - 用户列表（不包含 token 和 password 字段）
+ * @property {number} total - 总记录数
+ */
+
+/**
+ * 用户状态枚举
+ * @readonly
+ * @enum {number}
+ */
+const UserStatus = {
+  /** 正常 */
+  NORMAL: 0,
+  /** 禁用 */
+  DISABLED: 1,
+  /** 审核中 */
+  PENDING: 2,
+  /** 审核拒绝 */
+  REJECTED: 3
+};
+
 module.exports = {
   /**
-   * 分页查询列表
-   * @param {Object} data
-   * @param {number} data.pageIndex - 页码
-   * @param {number} data.pageSize - 每页条数
-   * @param {string} data.keyword - 搜索关键词
-   * @param {string} data.sortField - 排序字段
-   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
+   * 分页查询用户列表
+   * @async
+   * @function getList
+   * @description 支持关键词搜索（ID、用户名、昵称、手机号）、自定义排序和分页。
+   * 返回结果不包含敏感字段（token、password）。默认按注册时间倒序排列
+   * @param {UserListQueryParams} [data={}] - 查询参数对象
+   * @param {number} [data.pageIndex=1] - 页码，从1开始
+   * @param {number} [data.pageSize=20] - 每页条数
+   * @param {string} [data.keyword=''] - 搜索关键词，支持按ID、用户名、昵称、手机号搜索
+   * @param {string} [data.sortField=''] - 排序字段，为空时默认按 register_date 倒序
+   * @param {string} [data.sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+   * @returns {Promise<UserListResult>} 返回用户列表数据和总数
+   * @example
+   * const result = await userService.getList({
+   *   pageIndex: 1,
+   *   pageSize: 10,
+   *   keyword: '13800138000'
+   * });
    */
   async getList(data = {}) {
     let { pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
@@ -42,7 +101,7 @@ module.exports = {
 
     const skip = (pageIndex - 1) * pageSize;
 
-    // 构建查询
+    // 构建查询（排除敏感字段）
     let query = collection.where(where).field({
       token: false,
       password: false,
@@ -67,9 +126,17 @@ module.exports = {
   },
 
   /**
-   * 获取单条记录
-   * @param {string} _id - 用户 ID
-   * @returns {Promise<Object|undefined>} 用户详情
+   * 根据ID获取单条用户记录
+   * @async
+   * @function getById
+   * @description 获取用户详情，返回结果不包含敏感字段（token、password）
+   * @param {string} _id - 用户ID
+   * @returns {Promise<User|undefined>} 用户详情，如果不存在则返回 undefined
+   * @example
+   * const user = await userService.getById('xxx');
+   * if (user) {
+   *   console.log(user.nickname);
+   * }
    */
   async getById(_id) {
     const { data: [info] } = await collection
@@ -83,15 +150,24 @@ module.exports = {
   },
 
   /**
-   * 新增记录
-   * @param {Object} data - 用户数据
-   * @param {string} data.username - 用户名
+   * 新增用户记录
+   * @async
+   * @function add
+   * @description 创建新用户，会自动添加 register_date 字段，status 默认为 0（正常）
+   * @param {Object} [data={}] - 用户数据对象
+   * @param {string} data.username - 用户名（必填）
    * @param {string} [data.nickname] - 昵称
-   * @param {string} [data.avatar] - 头像
+   * @param {string} [data.avatar] - 头像 URL
    * @param {string} [data.mobile] - 手机号
    * @param {string} [data.email] - 邮箱
-   * @param {number} [data.status=0] - 状态 (0:正常 1:禁用 2:审核中 3:审核拒绝)
-   * @returns {Promise<{id: string}>} 新增用户的 ID
+   * @param {number} [data.status=0] - 状态（0:正常 1:禁用 2:审核中 3:审核拒绝）
+   * @returns {Promise<{id: string}>} 包含新增用户ID的对象
+   * @example
+   * const result = await userService.add({
+   *   username: 'testuser',
+   *   nickname: '测试用户',
+   *   mobile: '13800138000'
+   * });
    */
   async add(data = {}) {
     const { _id, register_date, ...record } = data;
@@ -102,17 +178,28 @@ module.exports = {
   },
 
   /**
-   * 更新记录
-   * @param {string} _id - 用户 ID
-   * @param {Object} data - 更新数据
+   * 更新用户记录
+   * @async
+   * @function update
+   * @description 根据ID更新用户信息。会自动校验手机号和邮箱的唯一性。
+   * 更新手机号时会自动设置 mobile_confirmed=1，清空则删除该字段。
+   * 更新邮箱时会自动设置 email_confirmed=1，清空则删除该字段。
+   * 不允许更新 username、register_date、password 字段
+   * @param {string} _id - 用户ID
+   * @param {Object} [data={}] - 要更新的数据
    * @param {string} [data.nickname] - 昵称
-   * @param {string} [data.avatar] - 头像
-   * @param {string} [data.mobile] - 手机号 (会校验是否重复，更新后设置 mobile_confirmed=1，清空则删除该字段)
-   * @param {string} [data.email] - 邮箱 (会校验是否重复，更新后设置 email_confirmed=1，清空则删除该字段)
-   * @param {number} [data.status] - 状态 (0:正常 1:禁用 2:审核中 3:审核拒绝)
-   * @returns {Promise<{updated: number}>} 更新的记录数
-   * @throws {Error} 手机号已被其他用户使用
-   * @throws {Error} 邮箱已被其他用户使用
+   * @param {string} [data.avatar] - 头像 URL
+   * @param {string} [data.mobile] - 手机号（会校验唯一性）
+   * @param {string} [data.email] - 邮箱（会校验唯一性）
+   * @param {number} [data.status] - 状态（0:正常 1:禁用 2:审核中 3:审核拒绝）
+   * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
+   * @throws {Error} 该手机号已被其他用户使用
+   * @throws {Error} 该邮箱已被其他用户使用
+   * @example
+   * const result = await userService.update('xxx', {
+   *   nickname: '新昵称',
+   *   mobile: '13900139000'
+   * });
    */
   async update(_id, data = {}) {
     // 排除不允许更新的字段
@@ -165,9 +252,18 @@ module.exports = {
   },
 
   /**
-   * 删除记录（支持批量）
-   * @param {string|string[]} ids - 单个用户 ID 或 ID 数组
+   * 删除用户记录（支持批量删除）
+   * @async
+   * @function remove
+   * @description 根据ID删除用户记录，支持传入单个ID或ID数组进行批量删除
+   * @param {string|string[]} ids - 单个用户ID或ID数组
    * @returns {Promise<{deleted: number}>} 删除的记录数
+   * @example
+   * // 删除单个用户
+   * await userService.remove('xxx');
+   *
+   * // 批量删除
+   * await userService.remove(['id1', 'id2']);
    */
   async remove(ids) {
     if (!Array.isArray(ids)) ids = [ids];

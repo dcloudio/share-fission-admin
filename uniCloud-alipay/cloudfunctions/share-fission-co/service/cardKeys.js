@@ -1,5 +1,8 @@
 /**
  * 卡密管理 - 服务实现层
+ * @module service/cardKeys
+ * @description 卡密管理模块，提供卡密的增删改查和批量导入功能。
+ * 卡密用于商品兑换，支持关联商品、状态管理和订单绑定
  */
 const db = uniCloud.database();
 const _ = db.command;
@@ -10,10 +13,73 @@ const libs = require('../libs');
 const collection = db.collection(Tables.cardKeys);
 const goodsCollection = db.collection(Tables.goods);
 
+/**
+ * @typedef {Object} CardKey
+ * @property {string} [_id] - 卡密ID
+ * @property {string} goods_id - 关联商品ID
+ * @property {string} [goods_name] - 商品名称（查询列表时关联获取）
+ * @property {string} card_no - 卡号
+ * @property {string} [card_pwd] - 卡密
+ * @property {string} [exchange_url] - 兑换地址
+ * @property {number} [status=0] - 状态（0:未发放 1:已发放）
+ * @property {string} [order_id] - 关联订单ID（发放后存在）
+ * @property {number} [used_time] - 使用时间戳（毫秒）
+ * @property {number} [create_time] - 创建时间戳（毫秒）
+ * @property {number} [update_time] - 更新时间戳（毫秒）
+ */
+
+/**
+ * @typedef {Object} CardKeyListQueryParams
+ * @property {number} [pageIndex=1] - 页码，从1开始
+ * @property {number} [pageSize=20] - 每页条数
+ * @property {string} [keyword=''] - 搜索关键词（卡号），支持精确匹配和模糊搜索
+ * @property {string} [goods_id=''] - 商品ID筛选
+ * @property {number|string} [status=''] - 状态筛选（0:未发放 1:已发放）
+ * @property {string} [sortField=''] - 排序字段
+ * @property {string} [sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+ */
+
+/**
+ * @typedef {Object} CardKeyListResult
+ * @property {CardKey[]} list - 卡密列表（包含 goods_name 字段）
+ * @property {number} total - 总记录数
+ */
+
+/**
+ * @typedef {Object} GoodsOption
+ * @property {string} _id - 商品ID
+ * @property {string} name - 商品名称
+ */
+
+/**
+ * @typedef {Object} ImportItem
+ * @property {string} card_no - 卡号
+ * @property {string} [card_pwd] - 卡密
+ * @property {string} [exchange_url] - 兑换地址
+ */
+
+/**
+ * 卡密状态枚举
+ * @readonly
+ * @enum {number}
+ */
+const CardKeyStatus = {
+  /** 未发放 */
+  UNUSED: 0,
+  /** 已发放 */
+  USED: 1
+};
+
 module.exports = {
   /**
    * 获取商品列表（用于下拉选择）
-   * @returns {Promise<{list: Array}>} 商品列表
+   * @async
+   * @function getGoodsList
+   * @description 获取所有未删除的商品，用于卡密管理时的商品选择下拉框
+   * @returns {Promise<{list: GoodsOption[]}>} 商品列表，包含 _id 和 name 字段，按排序值和创建时间倒序排列
+   * @example
+   * const { list } = await cardKeysService.getGoodsList();
+   * // list: [{ _id: 'xxx', name: '商品A' }, ...]
    */
   async getGoodsList() {
     const { data: list } = await goodsCollection
@@ -26,15 +92,26 @@ module.exports = {
   },
 
   /**
-   * 分页查询列表
-   * @param {Object} data
-   * @param {number} data.pageIndex - 页码
-   * @param {number} data.pageSize - 每页条数
-   * @param {string} data.keyword - 搜索关键词（卡号）
-   * @param {string} data.goods_id - 商品ID筛选
-   * @param {number} data.status - 状态筛选
-   * @param {string} data.sortField - 排序字段
-   * @param {string} data.sortOrder - 排序方向 'asc' | 'desc'
+   * 分页查询卡密列表
+   * @async
+   * @function getList
+   * @description 支持关键词搜索（卡号）、商品筛选、状态筛选、自定义排序和分页。
+   * 关联查询商品名称。默认按创建时间倒序排列
+   * @param {CardKeyListQueryParams} [data={}] - 查询参数对象
+   * @param {number} [data.pageIndex=1] - 页码，从1开始
+   * @param {number} [data.pageSize=20] - 每页条数
+   * @param {string} [data.keyword=''] - 搜索关键词（卡号），支持精确匹配和模糊搜索
+   * @param {string} [data.goods_id=''] - 商品ID筛选，为空时不筛选
+   * @param {number|string} [data.status=''] - 状态筛选（0:未发放 1:已发放），为空时不筛选
+   * @param {string} [data.sortField=''] - 排序字段，为空时默认按创建时间倒序
+   * @param {string} [data.sortOrder='desc'] - 排序方向，'asc' 升序 | 'desc' 降序
+   * @returns {Promise<CardKeyListResult>} 返回卡密列表和总数
+   * @example
+   * // 查询某商品的未发放卡密
+   * const result = await cardKeysService.getList({
+   *   goods_id: 'xxx',
+   *   status: 0
+   * });
    */
   async getList(data = {}) {
     let { pageIndex = 1, pageSize = 20, keyword = '', goods_id = '', status = '', sortField = '', sortOrder = 'desc' } = data;
@@ -101,9 +178,13 @@ module.exports = {
   },
 
   /**
-   * 获取单条记录
-   * @param {string} _id - 记录 ID
-   * @returns {Promise<Object|undefined>} 记录详情
+   * 根据ID获取单条卡密记录
+   * @async
+   * @function getById
+   * @param {string} _id - 卡密记录ID
+   * @returns {Promise<CardKey|undefined>} 卡密记录详情，不存在时返回 undefined
+   * @example
+   * const cardKey = await cardKeysService.getById('xxx');
    */
   async getById(_id) {
     const { data: [info] } = await collection.doc(_id).get();
@@ -111,14 +192,23 @@ module.exports = {
   },
 
   /**
-   * 新增记录
-   * @param {Object} data - 卡密数据
-   * @param {string} data.goods_id - 商品ID
-   * @param {string} data.card_no - 卡号
+   * 新增卡密记录
+   * @async
+   * @function add
+   * @description 创建新卡密，会自动添加 create_time 字段，status 默认为 0（未发放）
+   * @param {Object} [data={}] - 卡密数据对象
+   * @param {string} data.goods_id - 商品ID（必填）
+   * @param {string} data.card_no - 卡号（必填）
    * @param {string} [data.card_pwd] - 卡密
    * @param {string} [data.exchange_url] - 兑换地址
-   * @param {number} [data.status] - 状态
-   * @returns {Promise<{id: string}>} 新增记录的 ID
+   * @param {number} [data.status=0] - 状态，默认为0（未发放）
+   * @returns {Promise<{id: string}>} 包含新增卡密ID的对象
+   * @example
+   * const result = await cardKeysService.add({
+   *   goods_id: 'xxx',
+   *   card_no: 'CARD001',
+   *   card_pwd: 'PWD123'
+   * });
    */
   async add(data = {}) {
     const { _id, create_time, update_time, ...record } = data;
@@ -129,10 +219,24 @@ module.exports = {
   },
 
   /**
-   * 更新记录
-   * @param {string} _id - 记录 ID
-   * @param {Object} data - 更新数据
-   * @returns {Promise<{updated: number}>} 更新的记录数
+   * 更新卡密记录
+   * @async
+   * @function update
+   * @description 根据ID更新卡密信息，会自动添加 update_time 字段，
+   * 自动过滤 _id 和 create_time 字段
+   * @param {string} _id - 卡密记录ID
+   * @param {Object} [data={}] - 要更新的数据
+   * @param {string} [data.goods_id] - 商品ID
+   * @param {string} [data.card_no] - 卡号
+   * @param {string} [data.card_pwd] - 卡密
+   * @param {string} [data.exchange_url] - 兑换地址
+   * @param {number} [data.status] - 状态（0:未发放 1:已发放）
+   * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
+   * @example
+   * await cardKeysService.update('xxx', {
+   *   card_pwd: 'NEW_PWD',
+   *   exchange_url: 'https://example.com'
+   * });
    */
   async update(_id, data = {}) {
     const { _id: __, create_time, ...rest } = data;
@@ -145,9 +249,18 @@ module.exports = {
   },
 
   /**
-   * 删除记录（支持批量）
-   * @param {string|string[]} ids - 单个 ID 或 ID 数组
+   * 删除卡密记录（支持批量删除）
+   * @async
+   * @function remove
+   * @description 物理删除卡密记录，支持传入单个ID或ID数组进行批量删除
+   * @param {string|string[]} ids - 单个卡密ID或ID数组
    * @returns {Promise<{deleted: number}>} 删除的记录数
+   * @example
+   * // 删除单个卡密
+   * await cardKeysService.remove('xxx');
+   *
+   * // 批量删除
+   * await cardKeysService.remove(['id1', 'id2']);
    */
   async remove(ids) {
     if (!Array.isArray(ids)) ids = [ids];
@@ -157,12 +270,22 @@ module.exports = {
 
   /**
    * 批量导入卡密
-   * @param {string} goods_id - 商品ID
-   * @param {Array} list - 卡密列表
-   * @param {string} list[].card_no - 卡号
-   * @param {string} [list[].card_pwd] - 卡密
-   * @param {string} [list[].exchange_url] - 兑换地址
-   * @returns {Promise<{count: number}>} 导入的记录数
+   * @async
+   * @function batchImport
+   * @description 批量导入卡密到指定商品。会自动过滤空卡号，导入失败的记录会在控制台输出错误日志但不会中断整体导入
+   * @param {string} goods_id - 商品ID，所有卡密将关联到此商品
+   * @param {ImportItem[]} list - 卡密列表数组
+   * @param {string} list[].card_no - 卡号（必填），会自动去除首尾空格
+   * @param {string} [list[].card_pwd] - 卡密，会自动去除首尾空格
+   * @param {string} [list[].exchange_url] - 兑换地址，会自动去除首尾空格
+   * @returns {Promise<{count: number}>} 成功导入的记录数
+   * @example
+   * const result = await cardKeysService.batchImport('goods_xxx', [
+   *   { card_no: 'CARD001', card_pwd: 'PWD001' },
+   *   { card_no: 'CARD002', card_pwd: 'PWD002' },
+   *   { card_no: 'CARD003', card_pwd: 'PWD003', exchange_url: 'https://example.com' }
+   * ]);
+   * console.log(`成功导入 ${result.count} 条卡密`);
    */
   async batchImport(goods_id, list) {
     const now = Date.now();
