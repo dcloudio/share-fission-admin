@@ -169,6 +169,11 @@
         	"style": {
         		"navigationBarTitleText": "用户管理"
         	}
+      }, {
+        	"path": "scores/list",
+        	"style": {
+        		"navigationBarTitleText": "积分记录"
+        	}
       }]
     },
     {

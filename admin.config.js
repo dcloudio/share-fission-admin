@@ -42,7 +42,7 @@ export default {
     // 配置静态菜单列表（放置在用户被授权的菜单列表下边）
     staticMenu: [{
       menu_id: "sf-admin",
-      text: '新增页面',
+      text: '分销裂变',
       icon: 'admin-icons-kaifashili',
       url: "",
       children: [{
@@ -50,6 +50,12 @@ export default {
           text: '用户管理',
           icon: 'admin-icons-icon',
           value: '/pages/sf-admin/user/list',
+        },
+        {
+          menu_id: "sf-admin-scores-list",
+          text: '积分记录',
+          icon: 'admin-icons-icon',
+          value: '/pages/sf-admin/scores/list',
         },
         {
           menu_id: "sf-admin-config-form",
