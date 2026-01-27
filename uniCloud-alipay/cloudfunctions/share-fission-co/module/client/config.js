@@ -35,7 +35,6 @@ module.exports = {
    *
    * @param {Object} [data={}] - 查询参数对象（当前版本暂未使用，保留用于扩展）
    * @returns {Promise<Object>} 返回系统配置对象，包含以下字段：
-   *   - _id: 配置文档ID（固定值：main）
    *   - ad_score_base: 单次广告基础积分（非实时模式），默认30
    *   - ad_score_rate: 广告收益转积分比例（实时模式，1元=1000积分），默认1000
    *   - ad_score_self_rate: 自己获得积分比例（50%），默认0.5
