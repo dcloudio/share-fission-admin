@@ -90,7 +90,7 @@ module.exports = {
    *
    * @param {Object} [data={}] - 查询参数对象
    * @param {string} data._id - 商品ID（必填）
-   * @returns {Promise<Object>} 返回商品详情对象，包含 _id、name、category_id、category_name、description、image、images、price、original_price、stock、sales、sort_order、status 等字段
+   * @returns {Promise<Object>} 返回商品详情对象，包含 _id、name、category_id、category_name、description、images、detail_images、score_cost、stock、sort_order、status、is_deleted、create_time、update_time 等字段
    * @throws {Object} 如果 _id 参数缺失，返回错误码 400001
    * @throws {Object} 如果商品不存在、已下架或已软删除，返回错误码 404001
    * @example
@@ -99,8 +99,8 @@ module.exports = {
    *   _id: 'goods_id_123'
    * });
    * console.log(goodsInfo.name); // 商品名称
-   * console.log(goodsInfo.price); // 商品价格
-   * console.log(goodsInfo.category_name); // 分类名称
+   * console.log(goodsInfo.score_cost); // 兑换所需积分
+   * console.log(goodsInfo.category_name); // 分类名称（关联查询）
    */
   async getById(data = {}) {
     const { _id } = data;

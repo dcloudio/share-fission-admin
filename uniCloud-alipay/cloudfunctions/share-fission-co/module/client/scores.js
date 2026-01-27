@@ -82,7 +82,7 @@ module.exports = {
    *
    * @param {Object} [data={}] - 查询参数对象
    * @param {string} data._id - 记录ID（必填）
-   * @returns {Promise<Object>} 返回积分记录详情对象，包含 _id、user_id、score、type、balance、source、order_id、withdrawal_id、comment、create_date 等字段
+   * @returns {Promise<Object>} 返回积分记录详情对象，包含 _id、user_id、score、type、balance、source、source_user_id、relation_level、order_id、withdrawal_id、comment、create_date 等字段
    * @throws {Object} 如果 _id 参数缺失，返回错误码 400001，格式：{ errCode: number, errMsg: string }
    * @throws {Object} 如果记录不存在或不属于当前用户，返回错误码 404001，格式：{ errCode: number, errMsg: string }
    * @throws {Object} 如果未登录，返回认证错误，格式：{ errCode: number, errMsg: string }

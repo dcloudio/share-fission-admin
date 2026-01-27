@@ -90,7 +90,7 @@ module.exports = {
    *
    * @param {Object} [data={}] - 查询参数对象
    * @param {string} data._id - 订单ID（必填）
-   * @returns {Promise<Object>} 返回订单详情对象，包含 _id、order_no、user_id、goods_info、score_cost、status、card_key_id、create_time、update_time 等字段
+   * @returns {Promise<Object>} 返回订单详情对象，包含 _id、order_no、user_id、goods_info、score_cost、status、card_key_id、create_time、complete_time 等字段
    * @throws {Object} 如果 _id 参数缺失，返回错误码 400001，格式：{ errCode: number, errMsg: string }
    * @throws {Object} 如果订单不存在或不属于当前用户，返回错误码 404001，格式：{ errCode: number, errMsg: string }
    * @throws {Object} 如果未登录，返回认证错误，格式：{ errCode: number, errMsg: string }
