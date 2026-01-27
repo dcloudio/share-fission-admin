@@ -3,14 +3,9 @@
  * @module service/withdrawalLogs
  * @description 用户提现申请管理模块，提供提现记录查询、审核、打款等功能
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.withdrawalLogs);
-const usersCollection = db.collection(Tables.users);
-const scoresCollection = db.collection(Tables.scores);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} AccountInfo
@@ -65,7 +60,15 @@ const WithdrawalStatus = {
   PAID: 3
 };
 
-module.exports = {
+class WithdrawalLogsService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.withdrawalLogs;
+    // 额外需要用到的集合
+    this.usersCollection = this.db.collection(Tables.users);
+    this.scoresCollection = this.db.collection(Tables.scores);
+  }
+
   /**
    * 分页查询提现记录列表
    * @async
@@ -106,7 +109,7 @@ module.exports = {
       if (libs.common.isObjectId(keyword)) {
         where = {
           ...where,
-          ..._.or([
+          ...this._.or([
             { user_id: keyword },
             { 'account_info.account': keyword }
           ])
@@ -114,7 +117,7 @@ module.exports = {
       } else {
         where = {
           ...where,
-          ..._.or([
+          ...this._.or([
             { user_id: new RegExp(keyword, 'i') },
             { 'account_info.account': new RegExp(keyword, 'i') },
             { 'account_info.name': new RegExp(keyword, 'i') }
@@ -126,7 +129,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -140,31 +143,23 @@ module.exports = {
       query = query.orderBy("_id", sortOrder);
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
-  },
-
-  /**
-   * 根据ID获取单条提现记录
-   * @async
-   * @function getById
-   * @param {string} _id - 记录ID
-   * @returns {Promise<WithdrawalRecord|undefined>} 提现记录详情，如果不存在则返回 undefined
-   * @example
-   * const record = await withdrawalLogsService.getById('xxx');
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
+  }
 
   /**
    * 审核提现申请
    * @async
    * @function audit
-   * @description 审核提现申请，支持通过或拒绝。拒绝时会自动退还积分并创建退还记录
+   * @description 审核提现申请，支持通过或拒绝��拒绝时会自动退还积分并创建退还记录
    * @param {string} _id - 记录ID
    * @param {number} status - 审核状态（1:通过 2:拒绝）
    * @param {string} [reject_reason] - 拒绝原因（拒绝时必填）
@@ -180,7 +175,7 @@ module.exports = {
    */
   async audit(_id, status, reject_reason) {
     // 检查当前状态
-    const { data: [record] } = await collection.doc(_id).get();
+    const { data: [record] } = await this.collection.doc(_id).get();
     if (!record) {
       throw new Error('记录不存在');
     }
@@ -197,7 +192,7 @@ module.exports = {
       updateData.reject_reason = reject_reason;
     }
 
-    const { updated } = await collection.doc(_id).update(updateData);
+    const { updated } = await this.collection.doc(_id).update(updateData);
 
     // 拒绝时退还积分
     if (status === 2) {
@@ -205,7 +200,7 @@ module.exports = {
     }
 
     return { updated };
-  },
+  }
 
   /**
    * 退还积分（内部方法，拒绝提现时调用）
@@ -221,7 +216,7 @@ module.exports = {
     const { user_id, score, _id: withdrawal_id } = record;
 
     // 获取用户当前积分
-    const { data: [user] } = await usersCollection.doc(user_id).get();
+    const { data: [user] } = await this.usersCollection.doc(user_id).get();
     if (!user) {
       throw new Error('用户不存在');
     }
@@ -230,13 +225,13 @@ module.exports = {
     const newBalance = currentScore + score;
 
     // 更新用户积分
-    await usersCollection.doc(user_id).update({
-      score: _.inc(score),
-      score_withdrawn: _.inc(score * -1),
+    await this.usersCollection.doc(user_id).update({
+      score: this._.inc(score),
+      score_withdrawn: this._.inc(score * -1),
     });
 
     // 添加积分退还记录
-    await scoresCollection.add({
+    await this.scoresCollection.add({
       user_id,
       score: score,
       type: 1, // 1=收入
@@ -246,7 +241,7 @@ module.exports = {
       comment: '提现申请被拒绝，积分退还',
       create_date: Date.now()
     });
-  },
+  }
 
   /**
    * 确认打款
@@ -262,7 +257,7 @@ module.exports = {
    */
   async pay(_id) {
     // 检查当前状态
-    const { data: [record] } = await collection.doc(_id).get();
+    const { data: [record] } = await this.collection.doc(_id).get();
     if (!record) {
       throw new Error('记录不存在');
     }
@@ -275,7 +270,9 @@ module.exports = {
       pay_time: Date.now()
     };
 
-    const { updated } = await collection.doc(_id).update(updateData);
+    const { updated } = await this.collection.doc(_id).update(updateData);
     return { updated };
   }
-};
+}
+
+module.exports = new WithdrawalLogsService();

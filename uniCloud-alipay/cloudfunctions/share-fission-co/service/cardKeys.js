@@ -4,14 +4,9 @@
  * @description 卡密管理模块，提供卡密的增删改查和批量导入功能。
  * 卡密用于商品兑换，支持关联商品、状态管理和订单绑定
  */
-const db = uniCloud.database();
-const _ = db.command;
-const $ = _.aggregate;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.cardKeys);
-const goodsCollection = db.collection(Tables.goods);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} CardKey
@@ -70,7 +65,14 @@ const CardKeyStatus = {
   USED: 1
 };
 
-module.exports = {
+class CardKeysService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.cardKeys;
+    // 额外需要用到的集合
+    this.goodsCollection = this.db.collection(Tables.goods);
+  }
+
   /**
    * 获取商品列表（用于下拉选择）
    * @async
@@ -82,14 +84,14 @@ module.exports = {
    * // list: [{ _id: 'xxx', name: '商品A' }, ...]
    */
   async getGoodsList() {
-    const { data: list } = await goodsCollection
-      .where({ is_deleted: _.neq(true) })
+    const { data: list } = await this.goodsCollection
+      .where({ is_deleted: this._.neq(true) })
       .field({ _id: 1, name: 1 })
       .orderBy('sort_order', 'desc')
       .orderBy('create_time', 'desc')
       .get();
     return { list };
-  },
+  }
 
   /**
    * 分页查询卡密列表
@@ -144,7 +146,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -158,15 +160,21 @@ module.exports = {
       query = query.orderBy("_id", sortOrder || 'desc');
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
+
+    let list = listResult.data;
+    let total = totalResult.total;
 
     // 获取商品名称映射
     if (list.length > 0) {
       const goodsIds = [...new Set(list.map(item => item.goods_id).filter(Boolean))];
       if (goodsIds.length > 0) {
-        const { data: goodsData } = await goodsCollection
-          .where({ _id: _.in(goodsIds) })
+        const { data: goodsData } = await this.goodsCollection
+          .where({ _id: this._.in(goodsIds) })
           .field({ _id: 1, name: 1 })
           .get();
         const goodsMap = {};
@@ -179,21 +187,7 @@ module.exports = {
     }
 
     return { list, total };
-  },
-
-  /**
-   * 根据ID获取单条卡密记录
-   * @async
-   * @function getById
-   * @param {string} _id - 卡密记录ID
-   * @returns {Promise<CardKey|undefined>} 卡密记录详情，不存在时返回 undefined
-   * @example
-   * const cardKey = await cardKeysService.getById('xxx');
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
+  }
 
   /**
    * 新增卡密记录
@@ -218,72 +212,9 @@ module.exports = {
     const { _id, create_time, update_time, ...record } = data;
     record.status = record.status ?? 0;
     record.create_time = Date.now();
-    const { id } = await collection.add(record);
+    const { id } = await this.collection.add(record);
     return { id };
-  },
-
-  /**
-   * 更新卡密记录
-   * @async
-   * @function update
-   * @description 根据ID更新卡密信息，会自动添加 update_time 字段，
-   * 自动过滤 _id 和 create_time 字段
-   * @param {string} _id - 卡密记录ID
-   * @param {Object} [data={}] - 要更新的数据
-   * @param {string} [data.goods_id] - 商品ID
-   * @param {string} [data.card_no] - 卡号
-   * @param {string} [data.card_pwd] - 卡密
-   * @param {string} [data.exchange_url] - 兑换地址
-   * @param {number} [data.status] - 状态（0:未发放 1:已发放）
-   * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
-   * @example
-   * await cardKeysService.update('xxx', {
-   *   card_pwd: 'NEW_PWD',
-   *   exchange_url: 'https://example.com'
-   * });
-   */
-  async update(_id, data = {}) {
-    const { _id: __, create_time, ...rest } = data;
-    const updateData = {
-      ...rest,
-      update_time: Date.now()
-    };
-    const { updated } = await collection.doc(_id).update(updateData);
-    return { updated };
-  },
-
-  /**
-   * 删除卡密记录（支持多种参数形式）
-   * @async
-   * @function remove
-   * @description 支持三种删除方式：单个ID、ID数组批量删除、自定义where条件删除
-   * @param {string|string[]|Object} data - 删除条件
-   *   - string: 单个记录ID，删除该条记录
-   *   - string[]: ID数组，批量删除多条记录
-   *   - Object: 完整的where条件对象
-   * @returns {Promise<{deleted: number}>} 删除的记录数
-   * @example
-   * // 根据ID删除单条记录
-   * await cardKeysService.remove('xxx');
-   *
-   * // 根据ID数组批量删除
-   * await cardKeysService.remove(['id1', 'id2', 'id3']);
-   *
-   * // 根据自定义条件删除
-   * await cardKeysService.remove({ status: 0 });
-   */
-  async remove(data) {
-    let condition;
-    if (typeof data === 'string') {
-      condition = { _id: data };
-    } else if (Array.isArray(data)) {
-      condition = { _id: _.in(data) };
-    } else {
-      condition = data;
-    }
-    const { deleted } = await collection.where(condition).remove();
-    return { deleted };
-  },
+  }
 
   /**
    * 批量导入卡密
@@ -299,10 +230,8 @@ module.exports = {
    * @example
    * const result = await cardKeysService.batchImport('goods_xxx', [
    *   { card_no: 'CARD001', card_pwd: 'PWD001' },
-   *   { card_no: 'CARD002', card_pwd: 'PWD002' },
-   *   { card_no: 'CARD003', card_pwd: 'PWD003', exchange_url: 'https://example.com' }
+   *   { card_no: 'CARD002', card_pwd: 'PWD002' }
    * ]);
-   * console.log(`成功导入 ${result.count} 条卡密`);
    */
   async batchImport(goods_id, list) {
     const now = Date.now();
@@ -320,11 +249,10 @@ module.exports = {
     }
 
     // 批量插入（uniCloud 不支持 insertMany，需要逐条插入或使用事务）
-    // 这里使用循环插入，如果数据量大可考虑优化
     let count = 0;
     for (const record of records) {
       try {
-        await collection.add(record);
+        await this.collection.add(record);
         count++;
       } catch (e) {
         console.error('导入卡密失败:', e);
@@ -333,4 +261,6 @@ module.exports = {
 
     return { count };
   }
-};
+}
+
+module.exports = new CardKeysService();

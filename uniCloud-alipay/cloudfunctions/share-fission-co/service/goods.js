@@ -3,13 +3,9 @@
  * @module service/goods
  * @description 商品管理模块，提供商品的增删改查功能。支持软删除，关联查询分类信息
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.goods);
-const categoryCollection = db.collection(Tables.goodsCategories);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} Goods
@@ -60,7 +56,14 @@ const GoodsStatus = {
   ON_SHELF: 1
 };
 
-module.exports = {
+class GoodsService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.goods;
+    // 额外需要用到的集合
+    this.categoryCollection = this.db.collection(Tables.goodsCategories);
+  }
+
   /**
    * 分页查询商品列表
    * @async
@@ -87,7 +90,7 @@ module.exports = {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', category_id, status, sortField = 'sort_order', sortOrder = 'desc' } = data;
 
     let where = {
-      is_deleted: _.neq(true) // 排除软删除的记录
+      is_deleted: this._.neq(true) // 排除软删除的记录
     };
 
     if (user_id) {
@@ -112,7 +115,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -126,13 +129,13 @@ module.exports = {
     }
 
     let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    let { total } = await this.collection.where(where).count();
 
     // 关联查询分类名称
     if (list.length > 0) {
       const categoryIds = [...new Set(list.filter(item => item.category_id).map(item => item.category_id))];
       if (categoryIds.length > 0) {
-        const { data: categories } = await categoryCollection.where({ _id: _.in(categoryIds) }).field({ _id: true, name: true }).get();
+        const { data: categories } = await this.categoryCollection.where({ _id: this._.in(categoryIds) }).field({ _id: true, name: true }).get();
         const categoryMap = {};
         categories.forEach(c => { categoryMap[c._id] = c.name; });
         list = list.map(item => ({
@@ -145,21 +148,7 @@ module.exports = {
     }
 
     return { list, total };
-  },
-
-  /**
-   * 根据ID获取单条商品记录
-   * @async
-   * @function getById
-   * @param {string} _id - 商品ID
-   * @returns {Promise<Goods|undefined>} 商品详情，如果不存在则返回 undefined
-   * @example
-   * const goods = await goodsService.getById('xxx');
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
+  }
 
   /**
    * 新增商品记录
@@ -191,9 +180,9 @@ module.exports = {
     record.is_deleted = false;
     record.status = record.status ?? 1;
     record.sort_order = record.sort_order ?? 0;
-    const { id } = await collection.add(record);
+    const { id } = await this.collection.add(record);
     return { id };
-  },
+  }
 
   /**
    * 更新商品记录
@@ -225,9 +214,9 @@ module.exports = {
       ...rest,
       update_time: Date.now()
     };
-    const { updated } = await collection.doc(_id).update(updateData);
+    const { updated } = await this.collection.doc(_id).update(updateData);
     return { updated };
-  },
+  }
 
   /**
    * 删除商品记录（软删除，支持多种参数形式）
@@ -243,26 +232,22 @@ module.exports = {
    * @example
    * // 根据ID删除单条记录
    * await goodsService.remove('xxx');
-   *
-   * // 根据ID数组批量删除
-   * await goodsService.remove(['id1', 'id2', 'id3']);
-   *
-   * // 根据自定义条件删除
-   * await goodsService.remove({ status: 0 });
    */
   async remove(data) {
     let condition;
     if (typeof data === 'string') {
       condition = { _id: data };
     } else if (Array.isArray(data)) {
-      condition = { _id: _.in(data) };
+      condition = { _id: this._.in(data) };
     } else {
       condition = data;
     }
-    const { updated } = await collection.where(condition).update({
+    const { updated } = await this.collection.where(condition).update({
       is_deleted: true,
       update_time: Date.now()
     });
     return { deleted: updated };
   }
-};
+}
+
+module.exports = new GoodsService();

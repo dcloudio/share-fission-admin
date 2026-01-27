@@ -3,13 +3,9 @@
  * @module service/goodsCategories
  * @description 商品分类管理模块，支持多级分类（最多两级），提供分类的增删改查功能
  */
-const db = uniCloud.database();
-const _ = db.command;
-const $ = _.aggregate;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.goodsCategories);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} GoodsCategory
@@ -45,7 +41,12 @@ const collection = db.collection(Tables.goodsCategories);
  * @property {GoodsCategory[]} list - 一级分类列表（仅包含 _id 和 name）
  */
 
-module.exports = {
+class GoodsCategoriesService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.goodsCategories;
+  }
+
   /**
    * 分页查询分类列表
    * @async
@@ -65,11 +66,6 @@ module.exports = {
    * const result = await goodsCategoriesService.getList({
    *   parent_id: 'top'
    * });
-   *
-   * // 查询某个父分类下的子分类
-   * const result = await goodsCategoriesService.getList({
-   *   parent_id: 'xxx'
-   * });
    */
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', sortField = 'sort', sortOrder = 'asc' } = data;
@@ -83,7 +79,7 @@ module.exports = {
     // 父分类筛选
     if (parent_id === 'top') {
       // 顶级分类
-      where.parent_id = _.or([_.eq(''), _.exists(false)]);
+      where.parent_id = this._.or([this._.eq(''), this._.exists(false)]);
     } else if (parent_id) {
       where.parent_id = parent_id;
     }
@@ -100,7 +96,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -114,14 +110,20 @@ module.exports = {
       query = query.orderBy("_id", sortOrder || 'asc');
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
+
+    let list = listResult.data;
+    let total = totalResult.total;
 
     // 获取父分类名称
     if (list.length > 0) {
       const parentIds = [...new Set(list.filter(item => item.parent_id).map(item => item.parent_id))];
       if (parentIds.length > 0) {
-        const { data: parents } = await collection.where({ _id: _.in(parentIds) }).field({ _id: true, name: true }).get();
+        const { data: parents } = await this.collection.where({ _id: this._.in(parentIds) }).field({ _id: true, name: true }).get();
         const parentMap = {};
         parents.forEach(p => { parentMap[p._id] = p.name; });
         list = list.map(item => ({
@@ -134,7 +136,7 @@ module.exports = {
     }
 
     return { list, total };
-  },
+  }
 
   /**
    * 获取父分类列表（用于下拉选择）
@@ -142,13 +144,10 @@ module.exports = {
    * @function getParentList
    * @description 获取所有启用状态的一级分类，用于创建/编辑分类时的父分类下拉选择
    * @returns {Promise<ParentCategoryListResult>} 返回一级分类列表
-   * @example
-   * const { list } = await goodsCategoriesService.getParentList();
-   * // list: [{ _id: 'xxx', name: '电子产品' }, ...]
    */
   async getParentList() {
     // 只获取顶级分类作为可选父分类
-    const { data: list } = await collection
+    const { data: list } = await this.collection
       .where({
         status: 1,
         level: 1
@@ -156,21 +155,7 @@ module.exports = {
       .orderBy('sort', 'asc')
       .get();
     return { list };
-  },
-
-  /**
-   * 根据ID获取单条分类记录
-   * @async
-   * @function getById
-   * @param {string} _id - 分类ID
-   * @returns {Promise<GoodsCategory|undefined>} 分类详情，如果不存在则返回 undefined
-   * @example
-   * const category = await goodsCategoriesService.getById('xxx');
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
+  }
 
   /**
    * 新增分类记录
@@ -184,18 +169,6 @@ module.exports = {
    * @param {number} [data.sort=0] - 排序值
    * @param {number} [data.status=1] - 状态（0:禁用 1:启用）
    * @returns {Promise<{id: string}>} 包含新增分类ID的对象
-   * @example
-   * // 创建一级分类
-   * const result = await goodsCategoriesService.add({
-   *   name: '电子产品',
-   *   sort: 1
-   * });
-   *
-   * // 创建二级分类
-   * const result = await goodsCategoriesService.add({
-   *   name: '手机',
-   *   parent_id: 'xxx'
-   * });
    */
   async add(data = {}) {
     const { _id, create_time, update_time, level, ...record } = data;
@@ -218,9 +191,9 @@ module.exports = {
     record.status = record.status ?? 1;
     record.create_time = Date.now();
 
-    const { id } = await collection.add(record);
+    const { id } = await this.collection.add(record);
     return { id };
-  },
+  }
 
   /**
    * 更新分类记录
@@ -234,11 +207,6 @@ module.exports = {
    * @param {number} [data.sort] - 排序值
    * @param {number} [data.status] - 状态（0:禁用 1:启用）
    * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
-   * @example
-   * await goodsCategoriesService.update('xxx', {
-   *   name: '新名称',
-   *   sort: 2
-   * });
    */
   async update(_id, data = {}) {
     const { _id: __, create_time, level, ...rest } = data;
@@ -261,9 +229,9 @@ module.exports = {
     }
 
     updateData.update_time = Date.now();
-    const { updated } = await collection.doc(_id).update(updateData);
+    const { updated } = await this.collection.doc(_id).update(updateData);
     return { updated };
-  },
+  }
 
   /**
    * 删除分类记录（支持多种参数形式，级联删除子分类）
@@ -276,15 +244,6 @@ module.exports = {
    *   - string[]: ID数组，批量删除多条记录
    *   - Object: 完整的where条件对象
    * @returns {Promise<{deleted: number}>} 删除的记录数（包含子分类）
-   * @example
-   * // 根据ID删除单条记录
-   * await goodsCategoriesService.remove('xxx');
-   *
-   * // 根据ID数组批量删除
-   * await goodsCategoriesService.remove(['id1', 'id2', 'id3']);
-   *
-   * // 根据自定义条件删除
-   * await goodsCategoriesService.remove({ status: 0 });
    */
   async remove(data) {
     let condition;
@@ -293,16 +252,16 @@ module.exports = {
       condition = { _id: data };
       ids = [data];
     } else if (Array.isArray(data)) {
-      condition = { _id: _.in(data) };
+      condition = { _id: this._.in(data) };
       ids = data;
     } else {
       // 自定义条件，先查出符合条件的ID
-      const { data: records } = await collection.where(data).field({ _id: true }).get();
+      const { data: records } = await this.collection.where(data).field({ _id: true }).get();
       ids = records.map(r => r._id);
       if (ids.length === 0) {
         return { deleted: 0 };
       }
-      condition = { _id: _.in(ids) };
+      condition = { _id: this._.in(ids) };
     }
 
     // 获取所有要删除的分类及其子分类
@@ -311,7 +270,7 @@ module.exports = {
     // 递归查找子分类
     const findChildren = async (parentIds) => {
       if (parentIds.length === 0) return;
-      const { data: children } = await collection.where({ parent_id: _.in(parentIds) }).field({ _id: true }).get();
+      const { data: children } = await this.collection.where({ parent_id: this._.in(parentIds) }).field({ _id: true }).get();
       const childIds = children.map(c => c._id);
       if (childIds.length > 0) {
         childIds.forEach(id => allIds.add(id));
@@ -321,7 +280,9 @@ module.exports = {
 
     await findChildren(ids);
 
-    const { deleted } = await collection.where({ _id: _.in([...allIds]) }).remove();
+    const { deleted } = await this.collection.where({ _id: this._.in([...allIds]) }).remove();
     return { deleted };
   }
-};
+}
+
+module.exports = new GoodsCategoriesService();

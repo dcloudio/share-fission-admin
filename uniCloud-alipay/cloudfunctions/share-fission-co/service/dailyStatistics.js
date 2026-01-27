@@ -4,11 +4,8 @@
  * @description 每日统计数据管理模块，提供按日期维度的统计数据查询功能。
  * 统计数据以日期（YYYY-MM-DD格式）作为文档ID存储
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
-const collection = db.collection(Tables.dailyStatistics);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} DailyStatistics
@@ -43,7 +40,12 @@ const collection = db.collection(Tables.dailyStatistics);
  * @property {number} total - 总记录数
  */
 
-module.exports = {
+class DailyStatisticsService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.dailyStatistics;
+  }
+
   /**
    * 分页查询每日统计数据列表
    * @async
@@ -66,12 +68,6 @@ module.exports = {
    *   endDate: '2024-01-31',
    *   pageSize: 31
    * });
-   *
-   * // 查询最近7天的数据
-   * const result = await dailyStatisticsService.getList({
-   *   pageSize: 7,
-   *   sortOrder: 'desc'
-   * });
    */
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, startDate = '', endDate = '', sortField = '', sortOrder = 'desc' } = data;
@@ -84,17 +80,17 @@ module.exports = {
 
     // 日期范围筛选（_id 就是日期）
     if (startDate && endDate) {
-      where._id = _.gte(startDate).and(_.lte(endDate));
+      where._id = this._.gte(startDate).and(this._.lte(endDate));
     } else if (startDate) {
-      where._id = _.gte(startDate);
+      where._id = this._.gte(startDate);
     } else if (endDate) {
-      where._id = _.lte(endDate);
+      where._id = this._.lte(endDate);
     }
 
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -104,9 +100,17 @@ module.exports = {
       query = query.orderBy('_id', 'desc');
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
   }
-};
+}
+
+module.exports = new DailyStatisticsService();

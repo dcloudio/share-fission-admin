@@ -3,13 +3,9 @@
  * @module service/demo
  * @description 员工管理示例模块，提供员工信息的增删改查功能，用于演示标准 CRUD 操作
  */
-const db = uniCloud.database();
-const _ = db.command;
-const $ = _.aggregate;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.demoEmployee);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} Employee
@@ -43,7 +39,12 @@ const collection = db.collection(Tables.demoEmployee);
  * @property {number} total - 总记录数
  */
 
-module.exports = {
+class DemoService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.demoEmployee;
+  }
+
   /**
    * 分页查询员工列表
    * @async
@@ -69,31 +70,40 @@ module.exports = {
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
 
-    let where = {};
+    // 构建查询条件数组，最后用 _.and 组合
+    let conditions = [];
 
     if (user_id) {
-      where.user_id = user_id;
+      conditions.push({ user_id });
     }
 
     // 关键词搜索
     if (keyword) {
+      let keywordCondition;
       if (libs.common.isObjectId(keyword)) {
-        where = _.or([
+        keywordCondition = this._.or([
           { name: keyword },
           { department: keyword }
         ]);
       } else {
-        where = _.or([
+        keywordCondition = this._.or([
           { name: new RegExp(keyword, 'i') },
           { department: new RegExp(keyword, 'i') }
         ]);
       }
+      conditions.push(keywordCondition);
+    }
+
+    // 组合最终的 where 条件
+    let where = {};
+    if (conditions.length > 0) {
+      where = this._.and(conditions);
     }
 
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -103,129 +113,22 @@ module.exports = {
       query = query.orderBy('create_time', 'desc');
     }
 
+    // 辅助排序，保证分页顺序稳定性
     if (sortField !== "_id") {
       query = query.orderBy("_id", sortOrder);
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行查询列表和查询总数，提高响应速度
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
-  },
-
-  /**
-   * 根据ID获取单条员工记录
-   * @async
-   * @function getById
-   * @param {string} _id - 员工记录ID
-   * @returns {Promise<Employee|undefined>} 员工详情，如果不存在则返回 undefined
-   * @example
-   * const employee = await demoService.getById('xxx');
-   * if (employee) {
-   *   console.log(employee.name);
-   * }
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
-
-  /**
-   * 新增员工记录
-   * @async
-   * @function add
-   * @description 创建新员工记录，会自动添加 create_time 字段
-   * @param {Employee} [data={}] - 员工数据对象
-   * @param {string} data.name - 姓名（必填）
-   * @param {number} [data.age] - 年龄
-   * @param {string} [data.department] - 部门
-   * @param {string} [data.city] - 城市
-   * @param {string} [data.email] - 邮箱
-   * @param {string} [data.phone] - 电话
-   * @param {string} [data.address] - 地址
-   * @param {number} [data.salary] - 薪资
-   * @param {string} [data.joinDate] - 入职日期
-   * @param {string} [data.status] - 状态
-   * @returns {Promise<{id: string}>} 包含新增记录ID的对象
-   * @example
-   * const result = await demoService.add({
-   *   name: '张三',
-   *   department: '技术部',
-   *   salary: 10000
-   * });
-   * console.log(result.id); // 新记录ID
-   */
-  async add(data = {}) {
-    const { _id, create_time, update_time, ...record } = data;
-    record.create_time = Date.now();
-    const { id } = await collection.add(record);
-    return { id };
-  },
-
-  /**
-   * 更新员工记录
-   * @async
-   * @function update
-   * @description 根据ID更新员工信息，会自动添加 update_time 字段
-   * @param {string} _id - 员工记录ID
-   * @param {Partial<Employee>} [data={}] - 要更新的数据，会自动过滤 _id 和 create_time 字段
-   * @param {string} [data.name] - 姓名
-   * @param {number} [data.age] - 年龄
-   * @param {string} [data.department] - 部门
-   * @param {string} [data.city] - 城市
-   * @param {string} [data.email] - 邮箱
-   * @param {string} [data.phone] - 电话
-   * @param {string} [data.address] - 地址
-   * @param {number} [data.salary] - 薪资
-   * @param {string} [data.joinDate] - 入职日期
-   * @param {string} [data.status] - 状态
-   * @returns {Promise<{updated: number}>} 更新的记录数（0或1）
-   * @example
-   * const result = await demoService.update('xxx', {
-   *   salary: 12000,
-   *   department: '产品部'
-   * });
-   */
-  async update(_id, data = {}) {
-    const { _id: __, create_time, ...rest } = data;
-    const updateData = {
-      ...rest,
-      update_time: Date.now()
+    return {
+      list: listResult.data,
+      total: totalResult.total
     };
-    const { updated } = await collection.doc(_id).update(updateData);
-    return { updated };
-  },
-
-  /**
-   * 删除员工记录（支持多种参数形式）
-   * @async
-   * @function remove
-   * @description 支持三种删除方式：单个ID、ID数组批量删除、自定义where条件删除
-   * @param {string|string[]|Object} data - 删除条件
-   *   - string: 单个记录ID，删除该条记录
-   *   - string[]: ID数组，批量删除多条记录
-   *   - Object: 完整的where条件对象
-   * @returns {Promise<{deleted: number}>} 删除的记录数
-   * @example
-   * // 根据ID删除单条记录
-   * await demoService.remove('xxx');
-   *
-   * // 根据ID数组批量删除
-   * await demoService.remove(['id1', 'id2', 'id3']);
-   *
-   * // 根据自定义条件删除
-   * await demoService.remove({ status: 'inactive' });
-   */
-  async remove(data) {
-    let condition;
-    if (typeof data === 'string') {
-      condition = { _id: data };
-    } else if (Array.isArray(data)) {
-      condition = { _id: _.in(data) };
-    } else {
-      condition = data;
-    }
-    const { deleted } = await collection.where(condition).remove();
-    return { deleted };
   }
-};
+}
+
+module.exports = new DemoService();

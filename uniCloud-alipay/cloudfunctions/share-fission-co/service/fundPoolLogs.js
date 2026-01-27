@@ -3,12 +3,8 @@
  * @module service/fundPoolLogs
  * @description 资金池管理模块，提供资金池信息查询和资金流水记录查询功能
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
-const logsCollection = db.collection(Tables.fundPoolLogs);
-const poolCollection = db.collection(Tables.fundPool);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} FundPool
@@ -69,7 +65,14 @@ const FundPoolLogType = {
   SYSTEM_ADJUST: 'system_adjust'
 };
 
-module.exports = {
+class FundPoolLogsService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.fundPoolLogs;
+    // 额外需要用到的集合
+    this.poolCollection = this.db.collection(Tables.fundPool);
+  }
+
   /**
    * 获取资金池信息
    * @async
@@ -82,14 +85,14 @@ module.exports = {
    * console.log(`总现金: ${pool.total_cash}, 总积分: ${pool.total_score}`);
    */
   async getPool() {
-    const { data: [pool] } = await poolCollection.doc('main').get();
+    const { data: [pool] } = await this.poolCollection.doc('main').get();
     return pool || {
       total_cash: 0,
       total_score: 0,
       exchange_rate: 0.01,
       update_time: null
     };
-  },
+  }
 
   /**
    * 分页查询资金池流水列表
@@ -128,17 +131,17 @@ module.exports = {
     }
     // 时间范围筛选
     if (startTime && endTime) {
-      where.create_time = _.gte(startTime).and(_.lte(endTime));
+      where.create_time = this._.gte(startTime).and(this._.lte(endTime));
     } else if (startTime) {
-      where.create_time = _.gte(startTime);
+      where.create_time = this._.gte(startTime);
     } else if (endTime) {
-      where.create_time = _.lte(endTime);
+      where.create_time = this._.lte(endTime);
     }
 
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = logsCollection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -151,9 +154,17 @@ module.exports = {
       query = query.orderBy("_id", sortOrder);
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await logsCollection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
   }
-};
+}
+
+module.exports = new FundPoolLogsService();

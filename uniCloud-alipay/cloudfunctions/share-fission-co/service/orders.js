@@ -4,16 +4,9 @@
  * @description 订单管理模块，提供订单查询、卡密获取、订单退款等功能。
  * 使用聚合查询关联用户信息，支持事务处理退款操作
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-
-const ordersCollection = db.collection(Tables.orders);
-const cardKeysCollection = db.collection(Tables.cardKeys);
-const usersCollection = db.collection(Tables.users);
-const scoresCollection = db.collection(Tables.scores);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} GoodsInfo
@@ -80,7 +73,16 @@ const OrderStatus = {
   CANCEL: 'cancel'
 };
 
-module.exports = {
+class OrdersService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.orders;
+    // 额外需要用到的集合
+    this.cardKeysCollection = this.db.collection(Tables.cardKeys);
+    this.usersCollection = this.db.collection(Tables.users);
+    this.scoresCollection = this.db.collection(Tables.scores);
+  }
+
   /**
    * 分页查询订单列表
    * @async
@@ -195,15 +197,15 @@ module.exports = {
 
     // 执行查询
     const [listResult, countResult] = await Promise.all([
-      ordersCollection.aggregate(pipeline).end(),
-      ordersCollection.aggregate(countPipeline).end()
+      this.collection.aggregate(pipeline).end(),
+      this.collection.aggregate(countPipeline).end()
     ]);
 
     return {
       list: listResult.data || [],
       total: countResult.data[0]?.total || 0
     };
-  },
+  }
 
   /**
    * 获取订单关联的卡密信息
@@ -216,27 +218,24 @@ module.exports = {
    * @throws {Error} 订单不存在
    * @example
    * const cardKey = await ordersService.getCardKey('xxx');
-   * if (cardKey) {
-   *   console.log(cardKey.card_no, cardKey.card_pwd);
-   * }
    */
   async getCardKey(order_id) {
     // 先获取订单信息
-    const { data: [order] } = await ordersCollection.doc(order_id).get();
+    const { data: [order] } = await this.collection.doc(order_id).get();
     if (!order) {
       throw new Error('订单不存在');
     }
 
     // 如果订单有关联的卡密ID
     if (order.card_key_id) {
-      const { data: [cardKey] } = await cardKeysCollection.doc(order.card_key_id).get();
+      const { data: [cardKey] } = await this.cardKeysCollection.doc(order.card_key_id).get();
       return cardKey || null;
     }
 
     // 也可以通过 order_id 反查卡密表
-    const { data: [cardKey] } = await cardKeysCollection.where({ order_id }).get();
+    const { data: [cardKey] } = await this.cardKeysCollection.where({ order_id }).get();
     return cardKey || null;
-  },
+  }
 
   /**
    * 订单退款
@@ -253,19 +252,10 @@ module.exports = {
    * @throws {Error} 只有已完成的订单才能退款
    * @throws {Error} 用户不存在
    * @throws {Error} 退款失败：[具体错误信息]
-   * @example
-   * try {
-   *   const result = await ordersService.refund('xxx');
-   *   if (result.success) {
-   *     console.log('退款成功');
-   *   }
-   * } catch (e) {
-   *   console.error('退款失败:', e.message);
-   * }
    */
   async refund(order_id) {
     // 获取订单信息
-    const { data: [order] } = await ordersCollection.doc(order_id).get();
+    const { data: [order] } = await this.collection.doc(order_id).get();
     if (!order) {
       throw new Error('订单不存在');
     }
@@ -278,7 +268,7 @@ module.exports = {
     const { user_id, score_cost, card_key_id } = order;
 
     // 获取用户当前积分
-    const { data: [user] } = await usersCollection.doc(user_id).get();
+    const { data: [user] } = await this.usersCollection.doc(user_id).get();
     if (!user) {
       throw new Error('用户不存在');
     }
@@ -287,7 +277,7 @@ module.exports = {
     const newBalance = currentScore + score_cost;
 
     // 开始事务操作
-    const transaction = await db.startTransaction();
+    const transaction = await this.db.startTransaction();
 
     try {
       // 1. 更新订单状态为已取消
@@ -298,7 +288,7 @@ module.exports = {
 
       // 2. 更新用户积分
       await transaction.collection(Tables.users).doc(user_id).update({
-        score: _.inc(score_cost)
+        score: this._.inc(score_cost)
       });
 
       // 3. 创建积分变更记录
@@ -317,8 +307,8 @@ module.exports = {
       if (card_key_id) {
         await transaction.collection(Tables.cardKeys).doc(card_key_id).update({
           status: 0, // 未发放
-          order_id: _.remove(),
-          used_time: _.remove()
+          order_id: this._.remove(),
+          used_time: this._.remove()
         });
       }
 
@@ -330,4 +320,6 @@ module.exports = {
       throw new Error('退款失败：' + e.message);
     }
   }
-};
+}
+
+module.exports = new OrdersService();

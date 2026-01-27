@@ -3,12 +3,9 @@
  * @module service/scores
  * @description 积分流水记录管理模块，提供积分变动记录的查询和备注更新功能
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.scores);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} ScoreRecord
@@ -73,7 +70,12 @@ const ScoreSource = {
   SYSTEM: 'system'
 };
 
-module.exports = {
+class ScoresService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.scores;
+  }
+
   /**
    * 分页查询积分记录列表
    * @async
@@ -105,11 +107,11 @@ module.exports = {
     // 关键词搜索（按用户ID搜索）
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {
-        where = _.or([
+        where = this._.or([
           { user_id: keyword }
         ]);
       } else {
-        where = _.or([
+        where = this._.or([
           { user_id: new RegExp(keyword, 'i') }
         ]);
       }
@@ -118,7 +120,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -132,28 +134,17 @@ module.exports = {
       query = query.orderBy("_id", sortOrder);
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
-  },
-
-  /**
-   * 根据ID获取单条积分记录
-   * @async
-   * @function getById
-   * @param {string} _id - 记录ID
-   * @returns {Promise<ScoreRecord|undefined>} 积分记录详情，如果不存在则返回 undefined
-   * @example
-   * const record = await scoresService.getById('xxx');
-   * if (record) {
-   *   console.log(record.score, record.source);
-   * }
-   */
-  async getById(_id) {
-    const { data: [info] } = await collection.doc(_id).get();
-    return info;
-  },
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
+  }
 
   /**
    * 更新积分记录备注
@@ -167,9 +158,11 @@ module.exports = {
    * await scoresService.updateComment('xxx', '管理员手动调整');
    */
   async updateComment(_id, comment) {
-    const { updated } = await collection.doc(_id).update({
+    const { updated } = await this.collection.doc(_id).update({
       comment: comment || ''
     });
     return { updated };
   }
-};
+}
+
+module.exports = new ScoresService();

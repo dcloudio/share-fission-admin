@@ -3,12 +3,9 @@
  * @module service/user
  * @description 用户管理模块，提供用户信息的增删改查功能，支持手机号/邮箱唯一性校验
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.users);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} User
@@ -56,7 +53,12 @@ const UserStatus = {
   REJECTED: 3
 };
 
-module.exports = {
+class UserService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.users;
+  }
+
   /**
    * 分页查询用户列表
    * @async
@@ -89,14 +91,14 @@ module.exports = {
     // 关键词搜索
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {
-        where = _.or([
+        where = this._.or([
           { _id: keyword },
           { username: keyword },
           { nickname: keyword },
           { mobile: keyword }
         ]);
       } else {
-        where = _.or([
+        where = this._.or([
           { username: new RegExp(keyword, 'i') },
           { nickname: new RegExp(keyword, 'i') },
           { mobile: new RegExp(keyword, 'i') }
@@ -107,7 +109,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询（排除敏感字段）
-    let query = collection.where(where).field({
+    let query = this.collection.where(where).field({
       token: false,
       password: false,
     });
@@ -124,11 +126,17 @@ module.exports = {
       query = query.orderBy("_id", sortOrder);
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行查询列表和查询总数
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
-  },
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
+  }
 
   /**
    * 根据ID获取单条用户记录
@@ -144,7 +152,8 @@ module.exports = {
    * }
    */
   async getById(_id) {
-    const { data: [info] } = await collection
+    if (!_id) return undefined;
+    const { data: [info] } = await this.collection
       .doc(_id)
       .field({
         token: false,
@@ -152,7 +161,7 @@ module.exports = {
       })
       .get();
     return info;
-  },
+  }
 
   /**
    * 新增用户记录
@@ -178,9 +187,9 @@ module.exports = {
     const { _id, register_date, ...record } = data;
     record.register_date = Date.now();
     record.status = record.status ?? 0;
-    const { id } = await collection.add(record);
+    const { id } = await this.collection.add(record);
     return { id };
-  },
+  }
 
   /**
    * 更新用户记录
@@ -214,8 +223,8 @@ module.exports = {
     if (mobile !== undefined) {
       if (mobile) {
         // 检查手机号是否与其他用户重复
-        const { total } = await collection.where({
-          _id: _.neq(_id),
+        const { total } = await this.collection.where({
+          _id: this._.neq(_id),
           mobile: mobile
         }).count();
         if (total > 0) {
@@ -226,8 +235,8 @@ module.exports = {
         rest.mobile_confirmed = 1;
       } else {
         // 手机号清空，删除 mobile 和 mobile_confirmed 字段
-        rest.mobile = _.remove();
-        rest.mobile_confirmed = _.remove();
+        rest.mobile = this._.remove();
+        rest.mobile_confirmed = this._.remove();
       }
     }
 
@@ -235,8 +244,8 @@ module.exports = {
     if (email !== undefined) {
       if (email) {
         // 检查邮箱是否与其他用户重复
-        const { total } = await collection.where({
-          _id: _.neq(_id),
+        const { total } = await this.collection.where({
+          _id: this._.neq(_id),
           email: email
         }).count();
         if (total > 0) {
@@ -247,45 +256,14 @@ module.exports = {
         rest.email_confirmed = 1;
       } else {
         // 邮箱清空，删除 email 和 email_confirmed 字段
-        rest.email = _.remove();
-        rest.email_confirmed = _.remove();
+        rest.email = this._.remove();
+        rest.email_confirmed = this._.remove();
       }
     }
 
-    const { updated } = await collection.doc(_id).update(rest);
+    const { updated } = await this.collection.doc(_id).update(rest);
     return { updated };
-  },
-
-  /**
-   * 删除用户记录（支持多种参数形式）
-   * @async
-   * @function remove
-   * @description 支持三种删除方式：单个ID、ID数组批量删除、自定义where条件删除
-   * @param {string|string[]|Object} data - 删除条件
-   *   - string: 单个记录ID，删除该条记录
-   *   - string[]: ID数组，批量删除多条记录
-   *   - Object: 完整的where条件对象
-   * @returns {Promise<{deleted: number}>} 删除的记录数
-   * @example
-   * // 根据ID删除单条记录
-   * await userService.remove('xxx');
-   *
-   * // 根据ID数组批量删除
-   * await userService.remove(['id1', 'id2', 'id3']);
-   *
-   * // 根据自定义条件删除
-   * await userService.remove({ status: 1 });
-   */
-  async remove(data) {
-    let condition;
-    if (typeof data === 'string') {
-      condition = { _id: data };
-    } else if (Array.isArray(data)) {
-      condition = { _id: _.in(data) };
-    } else {
-      condition = data;
-    }
-    const { deleted } = await collection.where(condition).remove();
-    return { deleted };
   }
-};
+}
+
+module.exports = new UserService();

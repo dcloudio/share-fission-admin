@@ -4,12 +4,9 @@
  * @description 广告观看记录管理模块，提供广告观看记录的查询功能。
  * 用于追踪用户观看广告的行为和积分获取情况
  */
-const db = uniCloud.database();
-const _ = db.command;
-
 const { Tables } = require('../constants');
 const libs = require('../libs');
-const collection = db.collection(Tables.adWatchLogs);
+const BaseService = require('./base');
 
 /**
  * @typedef {Object} AdWatchLog
@@ -56,7 +53,12 @@ const AdType = {
   NATIVE: 'native'
 };
 
-module.exports = {
+class AdWatchLogsService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.adWatchLogs;
+  }
+
   /**
    * 分页查询广告观看记录列表
    * @async
@@ -76,11 +78,6 @@ module.exports = {
    *   keyword: 'user_xxx',
    *   pageSize: 10
    * });
-   *
-   * // 查询激励视频广告记录
-   * const result = await adWatchLogsService.getList({
-   *   keyword: 'rewardedVideo'
-   * });
    */
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
@@ -94,13 +91,13 @@ module.exports = {
     // 关键词搜索
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {
-        where = _.or([
+        where = this._.or([
           { _id: keyword },
           { user_id: keyword },
           { ad_id: keyword }
         ]);
       } else {
-        where = _.or([
+        where = this._.or([
           { user_id: new RegExp(keyword, 'i') },
           { ad_id: new RegExp(keyword, 'i') },
           { ad_type: new RegExp(keyword, 'i') }
@@ -111,7 +108,7 @@ module.exports = {
     const skip = (pageIndex - 1) * pageSize;
 
     // 构建查询
-    let query = collection.where(where);
+    let query = this.collection.where(where);
 
     // 处理排序
     if (sortField && sortOrder) {
@@ -125,9 +122,17 @@ module.exports = {
       query = query.orderBy("_id", sortOrder || 'desc');
     }
 
-    let { data: list } = await query.skip(skip).limit(pageSize).get();
-    let { total } = await collection.where(where).count();
+    // 并行执行
+    const [listResult, totalResult] = await Promise.all([
+      query.skip(skip).limit(pageSize).get(),
+      this.collection.where(where).count()
+    ]);
 
-    return { list, total };
+    return {
+      list: listResult.data,
+      total: totalResult.total
+    };
   }
-};
+}
+
+module.exports = new AdWatchLogsService();

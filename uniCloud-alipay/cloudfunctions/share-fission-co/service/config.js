@@ -3,12 +3,8 @@
  * @module service/config
  * @description 提供系统配置的读取和更新功能，支持应用名称、Logo、描述、版权信息等配置项管理
  */
-const db = uniCloud.database();
-const _ = db.command;
-const $ = _.aggregate;
-
 const { Tables } = require('../constants');
-const collection = db.collection(Tables.systemConfig);
+const BaseService = require('./base');
 
 /** @constant {string} CONFIG_ID - 主配置文档的固定ID */
 const CONFIG_ID = 'main';
@@ -31,7 +27,12 @@ const CONFIG_ID = 'main';
  * @property {string} [result.id] - 新增记录的ID（新增操作时返回）
  */
 
-module.exports = {
+class ConfigService extends BaseService {
+  constructor() {
+    super();
+    this.tableName = Tables.systemConfig;
+  }
+
   /**
    * 获取系统配置
    * @async
@@ -42,9 +43,9 @@ module.exports = {
    * console.log(config.app_name); // '分销裂变系统'
    */
   async get() {
-    const { data: [info] } = await collection.doc(CONFIG_ID).get();
+    const { data: [info] } = await this.collection.doc(CONFIG_ID).get();
     return info || {};
-  },
+  }
 
   /**
    * 更新系统配置
@@ -72,13 +73,13 @@ module.exports = {
     };
 
     // 检查是否存在
-    const { total } = await collection.where({ _id: CONFIG_ID }).count();
+    const { total } = await this.collection.where({ _id: CONFIG_ID }).count();
 
     let res;
     if (total > 0) {
-      res = await collection.doc(CONFIG_ID).update(updateData);
+      res = await this.collection.doc(CONFIG_ID).update(updateData);
     } else {
-      res = await collection.add({
+      res = await this.collection.add({
         _id: CONFIG_ID,
         ...updateData
       });
@@ -86,4 +87,6 @@ module.exports = {
 
     return { result: res };
   }
-};
+}
+
+module.exports = new ConfigService();
