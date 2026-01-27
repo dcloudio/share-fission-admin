@@ -60,6 +60,8 @@ module.exports = {
    * // 使用配置信息初始化应用业务逻辑
    */
   async get(data = {}) {
-    return await service.config.get();
+    const config = await service.config.get();
+    delete config._id;
+    return config;
   }
 }
