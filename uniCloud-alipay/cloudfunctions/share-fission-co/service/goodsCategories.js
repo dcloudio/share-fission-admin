@@ -68,12 +68,17 @@ class GoodsCategoriesService extends BaseService {
    * });
    */
   async getList(data = {}) {
-    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', sortField = 'sort', sortOrder = 'asc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', parent_id = '', status, sortField = 'sort', sortOrder = 'asc' } = data;
 
     let where = {};
 
     if (user_id) {
       where.user_id = user_id;
+    }
+
+    // 状态筛选
+    if (status !== undefined && status !== null && status !== '') {
+      where.status = status;
     }
 
     // 父分类筛选
