@@ -41,6 +41,8 @@ module.exports = async function(params = {}) {
       } else {
         throw err;
       }
+    } else {
+      throw err;
     }
   }
   return res;
