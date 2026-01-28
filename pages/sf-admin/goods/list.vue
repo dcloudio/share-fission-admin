@@ -553,6 +553,10 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
+function removeUrlParams(url) {
+  return url.includes('?') ? url.split('?')[0] : url;
+}
+
 // 图片上传
 const uploadImage = (field) => {
   uni.chooseImage({
@@ -562,10 +566,15 @@ const uploadImage = (field) => {
         try {
           const uploadRes = await uniCloud.uploadFile({
             filePath: path,
-            cloudPath: `goods/${Date.now()}_${Math.random().toString(36).slice(2)}.${path.split('.').pop()}`
+            cloudPath: `goods/${Date.now()}_${Math.random().toString(36).slice(2)}.png}`
           })
-          formData.value[field].push(uploadRes.fileID)
+          const tempFileURLRes = await uniCloud.getTempFileURL({
+            fileList: [uploadRes.fileID]
+          });
+          const tempFileURL = removeUrlParams(tempFileURLRes?.fileList[0].tempFileURL);
+          formData.value[field].push(tempFileURL)
         } catch (e) {
+          console.error('e: ', e);
           ElMessage.error('图片上传失败')
         }
       }
