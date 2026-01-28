@@ -78,6 +78,54 @@ module.exports = {
   },
 
   /**
+   * 积分兑换下单
+   * @async
+   * @function create
+   * @description 使用积分兑换指定商品。扣减当前用户积分，创建订单并绑定卡密，订单立即完成。
+   *
+   * **重要说明：**
+   * - 需要登录验证
+   * - 仅能为自己下单
+   * - 商品须为上架且未删除，且该商品有未发放卡密（库存充足）
+   * - 用户积分须 ≥ 商品所需积分
+   *
+   * @param {Object} [data={}] - 参数对象
+   * @param {string} data.goods_id - 商品ID（必填）
+   * @returns {Promise<Object>} 返回创建的订单对象，包含 _id、order_no、user_id、goods_info、score_cost、status、card_key_id、create_time、complete_time
+   * @throws {Object} 若 goods_id 缺失，返回 400001
+   * @throws {Object} 若商品不存在、已下架、库存不足、积分不足等，返回 400002 或 404001（由 errMsg 区分）
+   * @throws {Object} 若未登录，返回认证错误
+   * @example
+   * const order = await orders.create({ goods_id: 'goods_xxx' });
+   * console.log(order.order_no);
+   * console.log(order.status); // 'complete'
+   */
+  async create(data = {}) {
+    const { goods_id } = data;
+    if (!goods_id) return fail(400001, { name: 'goods_id' });
+
+    try {
+      const order = await service.orders.create(this.getUserId(), goods_id);
+      return order;
+    } catch (error) {
+      const msg = error.message || '';
+      if (msg.includes('商品不存在') || msg.includes('商品已下架')) {
+        return fail(404001, { name: '商品' });
+      }
+      if (msg.includes('库存不足')) {
+        return fail(400002, '库存不足');
+      }
+      if (msg.includes('积分不足')) {
+        return fail(400002, '积分不足');
+      }
+      if (msg.includes('商品ID不能为空')) {
+        return fail(400001, { name: 'goods_id' });
+      }
+      return fail(500001, msg || '下单失败');
+    }
+  },
+
+  /**
    * 根据ID查询订单详情
    * @async
    * @function getById

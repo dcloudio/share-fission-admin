@@ -78,9 +78,128 @@ class OrdersService extends BaseService {
     super();
     this.tableName = Tables.orders;
     // 额外需要用到的集合
+    this.goodsCollection = this.db.collection(Tables.goods);
     this.cardKeysCollection = this.db.collection(Tables.cardKeys);
     this.usersCollection = this.db.collection(Tables.users);
     this.scoresCollection = this.db.collection(Tables.scores);
+  }
+
+  /**
+   * 生成 25 位纯数字订单号
+   * @private
+   * @returns {string}
+   */
+  _genOrderNo() {
+    const ts = String(Date.now());
+    const rand = String(Math.floor(Math.random() * 1e12)).padStart(12, '0');
+    return (ts + rand).slice(0, 25);
+  }
+
+  /**
+   * 积分兑换下单（创建订单）
+   * @async
+   * @function create
+   * @description 用户使用积分兑换商品。校验商品上架与卡密库存，扣减用户积分，创建订单并绑定卡密（若有），写积分支出记录。
+   * @param {string} user_id - 用户ID
+   * @param {string} goods_id - 商品ID
+   * @returns {Promise<Object>} 返回创建的订单对象
+   * @throws {Error} 商品不存在、已下架、已删除、库存不足、用户积分不足、创建失败
+   */
+  async create(user_id, goods_id) {
+    if (!goods_id) {
+      throw new Error('商品ID不能为空');
+    }
+
+    const { data: [goods] } = await this.goodsCollection.doc(goods_id).get();
+    if (!goods) {
+      throw new Error('商品不存在');
+    }
+    if (goods.status !== 1) {
+      throw new Error('商品已下架');
+    }
+    if (goods.is_deleted === true) {
+      throw new Error('商品不存在');
+    }
+
+    const score_cost = Number(goods.score_cost) || 0;
+    if (score_cost <= 0) {
+      throw new Error('商品积分配置异常');
+    }
+
+    // 取一张该商品的未发放卡密，作为可兑换库存
+    const { data: cardKeyList } = await this.cardKeysCollection
+      .where({ goods_id, status: 0 })
+      .limit(1)
+      .get();
+    const cardKey = cardKeyList && cardKeyList[0];
+    if (!cardKey) {
+      throw new Error('库存不足');
+    }
+
+    const { data: [user] } = await this.usersCollection.doc(user_id).get();
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+    const currentScore = Number(user.score) || 0;
+    if (currentScore < score_cost) {
+      throw new Error('积分不足');
+    }
+
+    const now = Date.now();
+    const order_no = this._genOrderNo();
+    const goods_info = {
+      goods_id: goods._id,
+      name: goods.name || '',
+      image: (Array.isArray(goods.images) && goods.images[0]) ? goods.images[0] : '',
+      score_cost: score_cost
+    };
+
+    const transaction = await this.db.startTransaction();
+    try {
+      const orderDoc = {
+        order_no,
+        user_id,
+        goods_info,
+        score_cost,
+        status: OrderStatus.COMPLETE,
+        card_key_id: cardKey._id,
+        create_time: now,
+        complete_time: now
+      };
+      const addRes = await transaction.collection(Tables.orders).add(orderDoc);
+      const order_id = addRes.id;
+
+      await transaction.collection(Tables.users).doc(user_id).update({
+        score: this._.inc(-score_cost)
+      });
+
+      await transaction.collection(Tables.scores).add({
+        user_id,
+        score: -score_cost,
+        type: 2, // 支出
+        balance: currentScore - score_cost,
+        source: 'order',
+        order_id,
+        comment: '积分兑换',
+        create_date: now
+      });
+
+      await transaction.collection(Tables.cardKeys).doc(cardKey._id).update({
+        status: 1,
+        order_id,
+        used_time: now
+      });
+
+      await transaction.commit();
+
+      return {
+        _id: order_id,
+        ...orderDoc
+      };
+    } catch (e) {
+      await transaction.rollback();
+      throw new Error('下单失败：' + e.message);
+    }
   }
 
   /**
