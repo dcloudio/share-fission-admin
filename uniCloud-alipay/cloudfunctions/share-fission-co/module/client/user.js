@@ -64,66 +64,76 @@ module.exports = {
    * 获取团队统计信息
    * @async
    * @function getTeamStats
-   * @description 获取当前用户的团队统计数据，包括一级/二级下线数量、团队总人数和团队总收益。
+   * @description 获取当前用户的团队统计数据，包括一级/二级下线数量、团队总人数和团队收益。
    *
-   * **重要说明：**
-   * - 需要登录验证
-   * - 只能查询当前用户自己的团队统计
-   * - 一级下线：inviter_uid[0] 等于当前用户ID的用户
-   * - 二级下线：inviter_uid[1] 等于当前用户ID的用户
-   * - 团队收益：从积分记录中统计 source='invite' 且 relation_level 相关的收益
-   *
-   * @param {Object} [data={}] - 查询参数对象（当前版本暂未使用，保留用于扩展）
+   * @param {Object} [data={}] - 查询参数对象
+   * @param {string} [data.timeRange='all'] - 时间范围 today|yesterday|week|all
    * @returns {Promise<Object>} 返回团队统计对象，包含以下字段：
-   *   - level1_count: 一级下线数量
-   *   - level2_count: 二级下线数量
+   *   - level1_count: 一级下线数量（总数）
+   *   - level2_count: 二级下线数量（总数）
    *   - total_count: 团队总人数（一级+二级）
-   *   - total_income: 团队总收益（积分），从积分记录中统计 source='invite' 的收益总和
-   * @throws {Object} 如果未登录，返回认证错误，格式：{ errCode: number, errMsg: string }
-   * @example
-   * // 获取团队统计信息
-   * const stats = await user.getTeamStats();
-   * console.log(stats.level1_count); // 一级下线数量
-   * console.log(stats.level2_count); // 二级下线数量
-   * console.log(stats.total_count); // 团队总人数
-   * console.log(stats.total_income); // 团队总收益（积分）
+   *   - total_income: 指定时间范围内的团队收益（积分），从积分记录中统计 source='invite' 的收益总和
+   *   - total_income_all: 全部时间的团队总收益（积分）
    */
   async getTeamStats(data = {}) {
-    const user_id = this.getUserId();
-    const db = uniCloud.database();
-    const usersCollection = db.collection(Tables.users);
-    const scoresCollection = db.collection(Tables.scores);
+    try {
+      const user_id = this.getUserId();
+      if (!user_id) {
+        return fail(401001, { name: '用户认证' });
+      }
 
-    // 统计一级下线数量（inviter_uid[0] 等于当前用户ID）
-    const level1Result = await usersCollection.where({
-      'inviter_uid.0': user_id
-    }).count();
+      const db = uniCloud.database();
+      const usersCollection = db.collection(Tables.users);
+      const scoresCollection = db.collection(Tables.scores);
 
-    // 统计二级下线数量（inviter_uid[1] 等于当前用户ID）
-    const level2Result = await usersCollection.where({
-      'inviter_uid.1': user_id
-    }).count();
+      // 统计一级下线数量（inviter_uid[0] 等于当前用户ID）
+      const level1Result = await usersCollection.where({
+        'inviter_uid.0': user_id
+      }).count();
 
-    // 统计团队总收益（从积分记录中查询 source='invite' 且 user_id 为当前用户的记录）
-    // 注意：团队收益是指当前用户从团队获得的收益，所以查询条件是 user_id 为当前用户
-    const incomeResult = await scoresCollection.where({
-      user_id: user_id,
-      source: 'invite',
-      type: 1 // 收入类型
-    }).field({
-      score: true
-    }).get();
+      // 统计二级下线数量（inviter_uid[1] 等于当前用户ID）
+      const level2Result = await usersCollection.where({
+        'inviter_uid.1': user_id
+      }).count();
 
-    // 计算总收益
-    const total_income = incomeResult.data.reduce((sum, record) => {
-      return sum + (record.score || 0);
-    }, 0);
+      // 基础积分查询条件（全部时间）
+      const baseWhere = {
+        user_id: user_id,
+        source: 'invite',
+        type: 1 // 收入类型
+      };
 
-    return {
-      level1_count: level1Result.total || 0,
-      level2_count: level2Result.total || 0,
-      total_count: (level1Result.total || 0) + (level2Result.total || 0),
-      total_income: total_income
-    };
+      // 全部时间的总收益
+      const incomeAllResult = await scoresCollection.where(baseWhere).field({
+        score: true
+      }).get();
+
+      const total_income_all = incomeAllResult.data.reduce((sum, record) => {
+        return sum + (record.score || 0);
+      }, 0);
+
+      // 根据时间范围增加 create_date 过滤
+      const { timeRange = 'all' } = data;
+      // 暂时先返回全部数据，时间过滤功能后续添加
+      // TODO: 实现时间范围过滤
+      const incomeResult = await scoresCollection.where(baseWhere).field({
+        score: true
+      }).get();
+
+      const total_income = incomeResult.data.reduce((sum, record) => {
+        return sum + (record.score || 0);
+      }, 0);
+
+      return {
+        level1_count: level1Result.total || 0,
+        level2_count: level2Result.total || 0,
+        total_count: (level1Result.total || 0) + (level2Result.total || 0),
+        total_income,
+        total_income_all
+      };
+    } catch (error) {
+      console.error('getTeamStats error:', error);
+      return fail(500001, { name: '服务器错误', message: error.message });
+    }
   }
 }

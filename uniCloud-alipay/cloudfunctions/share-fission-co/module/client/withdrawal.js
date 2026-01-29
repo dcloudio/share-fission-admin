@@ -119,5 +119,83 @@ module.exports = {
       return fail(404001, { name: '提现记录' });
     }
     return info;
+  },
+
+  /**
+   * 申请提现
+   * @async
+   * @function apply
+   * @description 用户申请提现，需要登录验证。会自动计算手续费和实际到账金额，并扣除用户积分。
+   *
+   * **重要说明：**
+   * - 需要登录验证
+   * - 自动从系统配置获取手续费比例和最低提现积分
+   * - 提现积分需要大于最低提现积分
+   * - 用户积分需要足够
+   * - 提现申请创建后状态为待审核
+   *
+   * @param {Object} [data={}] - 提现申请参数
+   * @param {number} data.score - 提现积分数量（必填）
+   * @param {string} data.method - 提现方式（必填，可选值：'alipay'|'bank'）
+   * @param {Object} data.account_info - 收款账户信息（必填）
+   * @param {string} data.account_info.type - 账户类型（'alipay'|'bank'）
+   * @param {string} data.account_info.account - 账号（支付宝账号或银行卡号）
+   * @param {string} data.account_info.name - 真实姓名
+   * @param {string} [data.account_info.bank_name] - 开户银行（银行卡时必填）
+   * @returns {Promise<Object>} 返回新创建的提现记录ID，格式：{ id: string }
+   * @throws {Object} 如果参数缺失，返回错误码 400001，格式：{ errCode: number, errMsg: string }
+   * @throws {Object} 如果积分不足或低于最低提现，返回业务错误
+   * @throws {Object} 如果未登录，返回认证错误，格式：{ errCode: number, errMsg: string }
+   * @example
+   * // 支付宝提现
+   * const result = await withdrawal.apply({
+   *   score: 1000,
+   *   method: 'alipay',
+   *   account_info: {
+   *     type: 'alipay',
+   *     account: '13800138000',
+   *     name: '张三'
+   *   }
+   * });
+   * console.log(result.id); // 提现记录ID
+   *
+   * @example
+   * // 银行卡提现
+   * const result = await withdrawal.apply({
+   *   score: 2000,
+   *   method: 'bank',
+   *   account_info: {
+   *     type: 'bank',
+   *     account: '6222021234567890123',
+   *     name: '张三',
+   *     bank_name: '中国工商银行'
+   *   }
+   * });
+   */
+  async apply(data = {}) {
+    const { score, method, account_info } = data;
+
+    // 参数验证
+    if (!score) return fail(400001, { name: 'score' });
+    if (!method) return fail(400001, { name: 'method' });
+    if (!account_info) return fail(400001, { name: 'account_info' });
+    if (!account_info.account) return fail(400001, { name: 'account_info.account' });
+    if (!account_info.name) return fail(400001, { name: 'account_info.name' });
+
+    // 银行卡提现需要银行名称
+    if (method === 'bank' && !account_info.bank_name) {
+      return fail(400001, { name: 'account_info.bank_name' });
+    }
+
+    // 调用 service 层申请提现
+    return await service.withdrawalLogs.apply({
+      user_id: this.getUserId(),
+      score,
+      method,
+      account_info: {
+        type: method,
+        ...account_info
+      }
+    });
   }
 }

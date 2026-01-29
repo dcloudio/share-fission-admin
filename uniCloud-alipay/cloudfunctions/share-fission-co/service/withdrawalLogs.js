@@ -67,6 +67,107 @@ class WithdrawalLogsService extends BaseService {
     // 额外需要用到的集合
     this.usersCollection = this.db.collection(Tables.users);
     this.scoresCollection = this.db.collection(Tables.scores);
+    this.configCollection = this.db.collection(Tables.systemConfig);
+  }
+
+  /**
+   * 申请提现
+   * @async
+   * @function apply
+   * @description 用户申请提现，会自动计算手续费和实际到账金额，并扣除用户积分
+   * @param {Object} data - 提现申请数据
+   * @param {string} data.user_id - 用户ID
+   * @param {number} data.score - 提现积分数量
+   * @param {string} data.method - 提现方式（alipay/bank）
+   * @param {Object} data.account_info - 收款账户信息
+   * @returns {Promise<{id: string}>} 返回新创建的提现记录ID
+   * @throws {Error} 提现积分必须大于0
+   * @throws {Error} 提现积分不能低于最低提现积分
+   * @throws {Error} 用户不存在
+   * @throws {Error} 积分不足
+   * @example
+   * const result = await withdrawalLogsService.apply({
+   *   user_id: 'xxx',
+   *   score: 1000,
+   *   method: 'alipay',
+   *   account_info: { type: 'alipay', account: '13800138000', name: '张三' }
+   * });
+   */
+  async apply(data) {
+    const { user_id, score, method, account_info } = data;
+
+    // 参数验证
+    if (!score || score <= 0) {
+      throw new Error('提现积分必须大于0');
+    }
+
+    // 获取系统配置
+    const { data: [config] } = await this.configCollection.doc('main').get();
+    const withdrawalMinScore = config?.withdrawal_min_score || 1000;
+    const withdrawalFeeRate = config?.withdrawal_fee_rate || 0.2;
+    // 积分兑换比例：默认1000积分=1元（即 0.001）
+    const exchangeRate = config?.ad_score_rate ? (1 / config.ad_score_rate) : 0.001;
+
+    // 检查最低提现积分
+    if (score < withdrawalMinScore) {
+      throw new Error(`提现积分不能低于${withdrawalMinScore}积分`);
+    }
+
+    // 获取用户信息
+    const { data: [user] } = await this.usersCollection.doc(user_id).get();
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    // 检查积分是否足够
+    const currentScore = user.score || 0;
+    if (currentScore < score) {
+      throw new Error('积分不足');
+    }
+
+    // 计算金额
+    const amount = score * exchangeRate; // 兑换金额（元）
+    const fee = amount * withdrawalFeeRate; // 手续费（元）
+    const actualAmount = amount - fee; // 实际到账（元）
+
+    // 创建提现记录
+    const now = Date.now();
+    const withdrawalRecord = {
+      user_id,
+      score,
+      exchange_rate: exchangeRate,
+      amount,
+      fee_rate: withdrawalFeeRate,
+      fee,
+      actual_amount: actualAmount,
+      method,
+      account_info,
+      status: WithdrawalStatus.PENDING, // 待审核
+      create_time: now
+    };
+
+    const { id } = await this.collection.add(withdrawalRecord);
+
+    // 扣除用户积分
+    const newBalance = currentScore - score;
+    await this.usersCollection.doc(user_id).update({
+      score: this._.inc(-score),
+      score_withdrawn: this._.inc(score)
+    });
+
+    // 添加积分变动记录
+    await this.scoresCollection.add({
+      user_id,
+      score: -score,
+      type: 2, // 2=支出
+      balance: newBalance,
+      source: 'withdraw_apply',
+      withdrawal_id: id,
+      comment: '提现申请',
+      create_date: now
+    });
+
+    return { id };
   }
 
   /**
