@@ -109,10 +109,10 @@ class WithdrawalLogsService extends BaseService {
     const baseExchangeRate = config?.ad_score_rate ? (1 / config.ad_score_rate) : 0.001;
     // 保底兑换比例
     const minimumExchangeRatio = config?.minimum_exchange_ratio || 0;
-    
+
     // 确定最终使用的兑换比例：如果保底比例大于实际比例，则使用保底比例
-    const exchangeRate = (minimumExchangeRatio > 0 && minimumExchangeRatio > baseExchangeRate) 
-      ? minimumExchangeRatio 
+    const exchangeRate = (minimumExchangeRatio > 0 && minimumExchangeRatio > baseExchangeRate)
+      ? minimumExchangeRatio
       : baseExchangeRate;
 
     // 检查最低提现积分
@@ -291,40 +291,53 @@ class WithdrawalLogsService extends BaseService {
       throw new Error('该记录已审核，不可重复操作');
     }
 
-    const updateData = {
-      status,
-      audit_time: Date.now()
-    };
+    const transaction = await this.db.startTransaction();
 
-    if (status === 2 && reject_reason) {
-      updateData.reject_reason = reject_reason;
+    try {
+      const now = Date.now();
+      const updateData = {
+        status,
+        audit_time: now
+      };
+
+      if (status === 2 && reject_reason) {
+        updateData.reject_reason = reject_reason;
+      }
+
+      // 更新审核状态
+      await transaction.collection(this.tableName).doc(_id).update(updateData);
+
+      // 拒绝时退还积分
+      if (status === 2) {
+        await this._refundScoreInTransaction(transaction, record);
+      }
+
+      // 提交事务
+      await transaction.commit();
+
+      return { updated: 1 };
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
     }
-
-    const { updated } = await this.collection.doc(_id).update(updateData);
-
-    // 拒绝时退还积分
-    if (status === 2) {
-      await this._refundScore(record);
-    }
-
-    return { updated };
   }
 
   /**
-   * 退还积分（内部方法，拒绝提现时调用）
+   * 在事务中退还积分（内部方法）
    * @async
-   * @function _refundScore
+   * @function _refundScoreInTransaction
    * @private
-   * @description 拒绝提现时退还用户积分，并创建积分变动记录。
-   * 更新用户的 score（增加）和 score_withdrawn（减少）字段
+   * @description 在事务中退还用户积分并创建积分变动记录
+   * @param {Object} transaction - 事务对象
    * @param {WithdrawalRecord} record - 提现记录对象
    * @throws {Error} 用户不存在
    */
-  async _refundScore(record) {
+  async _refundScoreInTransaction(transaction, record) {
     const { user_id, score, _id: withdrawal_id } = record;
 
     // 获取用户当前积分
-    const { data: [user] } = await this.usersCollection.doc(user_id).get();
+    const { data: user } = await transaction.collection(Tables.users).doc(user_id).get();
     if (!user) {
       throw new Error('用户不存在');
     }
@@ -333,13 +346,13 @@ class WithdrawalLogsService extends BaseService {
     const newBalance = currentScore + score;
 
     // 更新用户积分
-    await this.usersCollection.doc(user_id).update({
+    await transaction.collection(Tables.users).doc(user_id).update({
       score: this._.inc(score),
-      score_withdrawn: this._.inc(score * -1),
+      score_withdrawn: this._.inc(score * -1)
     });
 
     // 添加积分退还记录
-    await this.scoresCollection.add({
+    await transaction.collection(Tables.scores).add({
       user_id,
       score: score,
       type: 1, // 1=收入
