@@ -57,6 +57,7 @@ class UserService extends BaseService {
   constructor() {
     super();
     this.tableName = Tables.users;
+    this.scoresCollection = this.db.collection(Tables.scores);
   }
 
   /**
@@ -263,6 +264,72 @@ class UserService extends BaseService {
 
     const { updated } = await this.collection.doc(_id).update(rest);
     return { updated };
+  }
+
+  /**
+   * 给指定用户增加或扣除积分
+   * @async
+   * @function addScore
+   * @description 给用户增加积分或扣除积分，同时记录积分变动日志
+   * @param {string} user_id - 用户ID
+   * @param {number} score - 增加的积分数量（可以为负数表示扣除）
+   * @param {string} source - 积分来源（如：'admin_add', 'admin_deduct', 'system_reward' 等）
+   * @param {string} [comment=''] - 备注说明
+   * @returns {Promise<{new_balance: number}>} 返回更新后的积分余额
+   * @throws {Error} 用户不存在
+   * @throws {Error} 积分变动数量不能为0
+   * @example
+   * // 给用户增加 100 积分
+   * const result = await userService.addScore('xxx', 100, 'admin_add', '管理员手动增加积分');
+   * 
+   * // 扣除用户 50 积分
+   * const result = await userService.addScore('xxx', -50, 'admin_deduct', '违规扣除');
+   */
+  async addScore(user_id, score, source, comment = '') {
+    // 参数验证
+    if (!user_id) {
+      throw new Error('用户ID不能为空');
+    }
+    if (!score || score === 0) {
+      throw new Error('积分变动数量不能为0');
+    }
+    if (!source) {
+      throw new Error('积分来源不能为空');
+    }
+
+    // 检查用户是否存在
+    const { data: [user] } = await this.collection.doc(user_id).get();
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    // 使用 updateAndReturn 更新用户积分并获取更新后的值
+    const { doc: updatedUser } = await this.collection.doc(user_id).updateAndReturn({
+      score: this._.inc(score)
+    });
+
+    if (!updatedUser) {
+      throw new Error('更新用户积分失败');
+    }
+
+    const new_balance = updatedUser.score || 0;
+    const now = Date.now();
+
+    // 添加积分变动记录
+    await this.scoresCollection.add({
+      user_id,
+      score: score,
+      type: score > 0 ? 1 : 2, // 1=收入 2=支出
+      balance: new_balance,
+      source: source,
+      comment: comment || (score > 0 ? '增加积分' : '扣除积分'),
+      create_date: now
+    });
+
+    return {
+      new_balance: new_balance,
+      score_change: score
+    };
   }
 }
 
