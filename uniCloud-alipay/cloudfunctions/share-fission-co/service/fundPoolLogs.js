@@ -12,6 +12,7 @@ const BaseService = require('./base');
  * @property {number} total_cash - 资金池总现金（元）
  * @property {number} total_score - 资金池总积分
  * @property {number} exchange_rate - 积分兑换比例（1积分 = exchange_rate 元）
+ * @property {number} minimum_exchange_ratio - 保底兑换比例（元/积分）
  * @property {number} [update_time] - 最后更新时间戳（毫秒）
  */
 
@@ -71,13 +72,14 @@ class FundPoolLogsService extends BaseService {
     this.tableName = Tables.fundPoolLogs;
     // 额外需要用到的集合
     this.poolCollection = this.db.collection(Tables.fundPool);
+    this.configCollection = this.db.collection(Tables.systemConfig);
   }
 
   /**
    * 获取资金池信息
    * @async
    * @function getPool
-   * @description 获取资金池当前状态，包括总现金、总积分和兑换比例。
+   * @description 获取资金池当前状态，包括总现金、总积分、兑换比例和保底兑换比例。
    * 如果资金池记录不存在，返回默认值
    * @returns {Promise<FundPool>} 资金池信息对象
    * @example
@@ -85,13 +87,25 @@ class FundPoolLogsService extends BaseService {
    * console.log(`总现金: ${pool.total_cash}, 总积分: ${pool.total_score}`);
    */
   async getPool() {
-    const { data: [pool] } = await this.poolCollection.doc('main').get();
-    return pool || {
+    // 并行查询资金池和系统配置
+    const [poolResult, configResult] = await Promise.all([
+      this.poolCollection.doc('main').get(),
+      this.configCollection.doc('main').get()
+    ]);
+
+    const pool = poolResult.data[0] || {
       total_cash: 0,
       total_score: 0,
       exchange_rate: 0.01,
       update_time: null
     };
+
+    const config = configResult.data[0] || {};
+    
+    // 添加保底兑换比例
+    pool.minimum_exchange_ratio = config.minimum_exchange_ratio || 0;
+
+    return pool;
   }
 
   /**

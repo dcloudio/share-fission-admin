@@ -106,7 +106,14 @@ class WithdrawalLogsService extends BaseService {
     const withdrawalMinScore = config?.withdrawal_min_score || 1000;
     const withdrawalFeeRate = config?.withdrawal_fee_rate || 0.2;
     // 积分兑换比例：默认1000积分=1元（即 0.001）
-    const exchangeRate = config?.ad_score_rate ? (1 / config.ad_score_rate) : 0.001;
+    const baseExchangeRate = config?.ad_score_rate ? (1 / config.ad_score_rate) : 0.001;
+    // 保底兑换比例
+    const minimumExchangeRatio = config?.minimum_exchange_ratio || 0;
+    
+    // 确定最终使用的兑换比例：如果保底比例大于实际比例，则使用保底比例
+    const exchangeRate = (minimumExchangeRatio > 0 && minimumExchangeRatio > baseExchangeRate) 
+      ? minimumExchangeRatio 
+      : baseExchangeRate;
 
     // 检查最低提现积分
     if (score < withdrawalMinScore) {
