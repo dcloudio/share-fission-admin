@@ -79,11 +79,11 @@
           </el-row>
         </el-card>
 
-        <!-- 签到与提现配置 -->
+        <!-- 提现配置 -->
         <el-card class="form-card" shadow="never">
           <template #header>
             <div class="card-header">
-              <span class="title">签到与提现配置</span>
+              <span class="title">提现配置</span>
             </div>
           </template>
 
@@ -99,6 +99,12 @@
                   <template #suffix><span>%</span></template>
                 </el-input-number>
                 <div class="form-tip">用户提现时扣除的手续费比例，建议设置为10%-30%左右（扣除的手续费会回流到总资金中，即只要有人提现，则剩余积分就会增值）</div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="24" :xs="24">
+              <el-form-item label="保底兑换比例" prop="minimum_exchange_ratio">
+                <el-input-number v-model="formData.minimum_exchange_ratio" :min="0" :step="1" class="input-width" />
+                <div class="form-tip">当实际兑换比例小于保底兑换比例时，用户提现将按保底兑换比例结算，设为0则不启用保底机制</div>
               </el-form-item>
             </el-col>
           </el-row>

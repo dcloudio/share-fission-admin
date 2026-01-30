@@ -8,5 +8,6 @@
 	"ad_daily_limit": 10,
 	"withdrawal_fee_rate": 0.2,
 	"withdrawal_min_score": 1000,
+  "minimum_exchange_ratio": 0,
 	"update_time": 1735689600000
 }]

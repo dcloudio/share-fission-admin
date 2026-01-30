@@ -21,10 +21,35 @@
         <text class="pool-value rate">{{ fundPool.exchange_rate }} 元/积分</text>
       </view>
       <view class="pool-item">
+        <text class="pool-label">保底兑换比例</text>
+        <view class="pool-value-row">
+          <text class="pool-value" :class="{ 'warning-text': isMinimumRatioExceeded }">{{ minimumExchangeRatio }}</text>
+          <el-tag v-if="isMinimumRatioExceeded" type="warning" size="small">已启用保底</el-tag>
+          <el-button type="primary" size="small" @click="showSetMinimumRatioDialog">设置</el-button>
+        </view>
+      </view>
+      <view class="pool-item">
         <text class="pool-label">更新时间</text>
         <text class="pool-value time">{{ formatTime(fundPool.update_time) }}</text>
       </view>
     </view>
+
+    <!-- 保底兑换比例警告提示 -->
+    <el-alert
+      v-if="isMinimumRatioExceeded"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-top: 10px"
+    >
+      <template #title>
+        <span style="font-weight: 600;">保底兑换比例已启用</span>
+      </template>
+      <template #default>
+        当前兑换比例 <strong>{{ fundPool.exchange_rate }}</strong> 元/积分低于保底比例 <strong>{{ minimumExchangeRatio }}</strong>，
+        用户提现将按保底比例 <strong>{{ minimumExchangeRatio }}</strong> 结算，请注意资金池的余额变化。
+      </template>
+    </el-alert>
 
     <!-- 投入资金弹窗 -->
     <el-dialog
@@ -59,6 +84,37 @@
         <span class="dialog-footer">
           <el-button @click="addFundDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="handleAddFund" :loading="addFundLoading">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 设置保底兑换比例弹窗 -->
+    <el-dialog
+      v-model="setMinimumRatioDialogVisible"
+      title="设置保底兑换比例"
+      width="450px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="minimumRatioForm" :rules="minimumRatioRules" ref="minimumRatioFormRef" label-width="130px">
+        <el-form-item label="保底兑换比例" prop="ratio">
+          <el-input-number
+            v-model="minimumRatioForm.ratio"
+            :min="0"
+            :precision="3"
+            :step="0.001"
+            placeholder="请输入保底兑换比例"
+            style="width: 100%"
+          />
+          <div style="font-size: 12px; color: #909399; margin-top: 8px; line-height: 1.5;">
+            当前汇率：{{ fundPool.exchange_rate }} 元/积分<br/>
+            设为 0 则不启用保底机制，大于 0 且大于当前汇率时生效
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="setMinimumRatioDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSetMinimumRatio" :loading="setMinimumRatioLoading">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -272,12 +328,32 @@ const addFundRules = {
   ]
 }
 
+// 设置保底兑换比例相关
+const setMinimumRatioDialogVisible = ref(false)
+const setMinimumRatioLoading = ref(false)
+const minimumRatioFormRef = ref(null)
+const minimumRatioForm = reactive({
+  ratio: 0
+})
+
+const minimumRatioRules = {
+  ratio: [
+    { required: true, message: '请输入保底兑换比例', trigger: 'blur' },
+    { type: 'number', min: 0, message: '保底兑换比例不能为负数', trigger: 'blur' }
+  ]
+}
+
 // 资金池信息
 const fundPool = reactive({
   total_cash: 0,
   total_score: 0,
   exchange_rate: 0.01,
   update_time: null
+})
+
+// 系统配置
+const systemConfig = reactive({
+  minimum_exchange_ratio: 0
 })
 
 const tableData = reactive({ list: [], total: 0 })
@@ -294,6 +370,19 @@ const computedColumns = computed(() => [
   ...tableColumns.value
 ])
 
+// 保底兑换比例显示文本
+const minimumExchangeRatio = computed(() => {
+  const ratio = systemConfig.minimum_exchange_ratio
+  return ratio > 0 ? `${ratio} 元/积分` : '未设置'
+})
+
+// 判断保底兑换比例是否大于当前比例
+const isMinimumRatioExceeded = computed(() => {
+  const minRatio = systemConfig.minimum_exchange_ratio
+  const currentRatio = fundPool.exchange_rate
+  return minRatio > 0 && minRatio > currentRatio
+})
+
 // ========== 方法 ==========
 const calculateTableHeight = () => {
   nextTick(() => {
@@ -303,6 +392,20 @@ const calculateTableHeight = () => {
       ? windowHeight - container.getBoundingClientRect().top - 100
       : windowHeight - 350
   })
+}
+
+// 加载系统配置
+const loadSystemConfig = async () => {
+  try {
+    const res = await sfCo.action({
+      name: 'admin/config/get'
+    })
+    if (res && res.info) {
+      systemConfig.minimum_exchange_ratio = res.info.minimum_exchange_ratio || 0
+    }
+  } catch (e) {
+    console.error('加载系统配置失败', e)
+  }
 }
 
 // 加载资金池信息
@@ -471,8 +574,54 @@ const handleAddFund = async () => {
   }
 }
 
+// 显示设置保底兑换比例弹窗
+const showSetMinimumRatioDialog = () => {
+  minimumRatioForm.ratio = systemConfig.minimum_exchange_ratio || 0
+  setMinimumRatioDialogVisible.value = true
+  nextTick(() => {
+    minimumRatioFormRef.value?.clearValidate()
+  })
+}
+
+// 处理设置保底兑换比例
+const handleSetMinimumRatio = async () => {
+  try {
+    await minimumRatioFormRef.value?.validate()
+  } catch (e) {
+    return
+  }
+
+  setMinimumRatioLoading.value = true
+  try {
+    // 获取当前所有配置
+    const configRes = await sfCo.action({
+      name: 'admin/config/get'
+    })
+    
+    const configData = configRes?.info || {}
+    configData.minimum_exchange_ratio = minimumRatioForm.ratio
+    
+    // 更新配置
+    await sfCo.action({
+      name: 'admin/config/update',
+      data: configData
+    })
+    
+    ElMessage.success('保底兑换比例设置成功')
+    setMinimumRatioDialogVisible.value = false
+    
+    // 重新加载系统配置
+    await loadSystemConfig()
+  } catch (e) {
+    ElMessage.error(e.message || '设置失败')
+  } finally {
+    setMinimumRatioLoading.value = false
+  }
+}
+
 // ========== 生命周期 ==========
 onLoad(() => {
+  loadSystemConfig()
   loadFundPool()
   loadData()
   setTimeout(calculateTableHeight, 300)
@@ -498,6 +647,11 @@ page {
   background: #fff;
   border-radius: 8px;
   padding: 24px;
+
+  .warning-text {
+    color: #e6a23c;
+    font-weight: 600;
+  }
   margin-bottom: 16px;
 
   .pool-item {
