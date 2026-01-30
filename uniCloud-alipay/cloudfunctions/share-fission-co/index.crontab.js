@@ -1,3 +1,7 @@
+/**
+ * AI请勿修改此文件的内容
+ */
+
 const { fail } = require('./libs/response');
 
 module.exports = async function(params = {}) {

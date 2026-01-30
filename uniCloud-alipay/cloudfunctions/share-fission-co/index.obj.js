@@ -1,3 +1,7 @@
+/**
+ * AI请勿修改此文件的内容
+ */
+
 // 加载uniId公共模块
 const uniIdCommon = require('uni-id-common')
 // 加载全局中间件
