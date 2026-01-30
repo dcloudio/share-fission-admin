@@ -18,22 +18,22 @@
 		},
 		"total_cash": {
 			"bsonType": "int",
-			"description": "总奖励",
+			"description": "广告收入",
 			"defaultValue": 0
 		},
 		"total_score": {
 			"bsonType": "int",
-			"description": "总积分",
+			"description": "发放积分",
 			"defaultValue": 0
 		},
 		"total_people": {
 			"bsonType": "int",
-			"description": "总人数",
+			"description": "观看人数",
 			"defaultValue": 0
 		},
 		"total_times": {
 			"bsonType": "int",
-			"description": "总次数",
+			"description": "观看次数",
 			"defaultValue": 0
 		},
     "is_settled": {

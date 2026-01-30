@@ -101,7 +101,7 @@ class FundPoolLogsService extends BaseService {
     };
 
     const config = configResult.data[0] || {};
-    
+
     // 添加保底兑换比例
     pool.minimum_exchange_ratio = config.minimum_exchange_ratio || 0;
 
@@ -187,12 +187,13 @@ class FundPoolLogsService extends BaseService {
    * @description 管理员向资金池投入资金，先更新资金池余额和汇率，再记录流水日志
    * @param {number} amount - 投入金额（元）
    * @param {string} [remark=''] - 备注说明
+   * @param {number} score - 积分
    * @returns {Promise<Object>} 返回操作结果
    * @throws {Error} 当投入金额无效时抛出错误
    * @example
-   * const result = await fundPoolLogsService.addFund(1000, '初始资金投入');
+   * const result = await fundPoolLogsService.addFund(1000, '初始资金投入', 0);
    */
-  async addFund(amount, remark = '') {
+  async addFund(amount, remark = '', score = 0) {
     if (!amount || amount <= 0) {
       throw new Error('投入金额必须大于0');
     }
@@ -200,10 +201,14 @@ class FundPoolLogsService extends BaseService {
     const now = Date.now();
 
     // 使用 updateAndReturn 先更新 sf-fund-pool 表，获取更新后的精确值
-    const { doc: updatedPool } = await this.poolCollection.doc('main').updateAndReturn({
+    const updateData = {
       total_cash: this._.inc(amount),
       update_time: now
-    });
+    };
+    if (score > 0) {
+      updateData.total_score = this._.inc(score);
+    }
+    const { doc: updatedPool } = await this.poolCollection.doc('main').updateAndReturn(updateData);
 
     // 检查更新是否成功
     if (!updatedPool) {
@@ -217,7 +222,7 @@ class FundPoolLogsService extends BaseService {
     // 重新计算汇率：exchange_rate = total_cash / total_score
     let new_exchange_rate = updatedPool.exchange_rate;
     if (score_balance > 0) {
-      new_exchange_rate = parseFloat((cash_balance / score_balance).toFixed(4));
+      new_exchange_rate = Math.floor((cash_balance / score_balance) * 10000) / 10000; // 向下取四位小数
     }
 
     // 如果汇率有变化，更新资金池的汇率
@@ -231,7 +236,7 @@ class FundPoolLogsService extends BaseService {
     const log = {
       type: 'deposit', // 投入资金类型
       cash_change: amount,
-      score_change: 0,
+      score_change: score,
       cash_balance: cash_balance,
       score_balance: score_balance,
       exchange_rate: new_exchange_rate,
@@ -246,6 +251,7 @@ class FundPoolLogsService extends BaseService {
       message: '投入资金成功',
       data: {
         amount,
+        score,
         cash_balance,
         exchange_rate: new_exchange_rate
       }

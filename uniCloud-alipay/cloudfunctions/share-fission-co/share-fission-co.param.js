@@ -8,14 +8,14 @@ const clientInfo = { // 模拟clientInfo
 	appId: '__UNI__2B3B0F5'
 }
 
-action({
-  name: "client/config/get",
-  data: {
+// action({
+//   name: "client/config/get",
+//   data: {
 
-  }
-});
+//   }
+// });
 
-// crontab({
-//   name: "demo",
-//   a: 1
-// })
+crontab({
+  name: "calcPointRatioDaily",
+  a: 1
+})

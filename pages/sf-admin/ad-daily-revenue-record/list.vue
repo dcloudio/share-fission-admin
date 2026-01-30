@@ -152,51 +152,34 @@
     <el-dialog
       v-model="revenueDialogVisible"
       title="填写广告收入"
-      width="500px"
+      width="400px"
       destroy-on-close
     >
+      <el-alert
+        type="warning"
+        :closable="false"
+        style="margin-bottom: 20px;"
+      >
+        <template #default>
+          <text style="font-size: 14px;">填写广告收入后，该记录将变为<strong>已结算</strong>状态，对应的金额和积分将进入奖池。</text>
+        </template>
+      </el-alert>
       <el-form ref="revenueFormRef" :model="revenueFormData" :rules="revenueFormRules" label-width="100px">
         <el-form-item label="结算日期">
           <el-input v-model="revenueFormData.statement_date" disabled />
         </el-form-item>
-        <el-form-item label="总奖励" prop="total_cash">
-          <el-input-number 
+        <el-form-item label="发放积分">
+          <el-input v-model="revenueFormData.total_score" disabled />
+        </el-form-item>
+        <el-form-item label="广告收入" prop="total_cash">
+          <el-input
+            ref="revenueCashInputRef"
             v-model="revenueFormData.total_cash" 
-            :min="0" 
-            :precision="0"
-            :controls="false"
+            type="number"
+            min="0"
+            class="text-left-input"
             style="width: 100%" 
-            placeholder="请输入总奖励金额"
-          />
-        </el-form-item>
-        <el-form-item label="总积分" prop="total_score">
-          <el-input-number 
-            v-model="revenueFormData.total_score" 
-            :min="0" 
-            :precision="0"
-            :controls="false"
-            style="width: 100%" 
-            placeholder="请输入总积分"
-          />
-        </el-form-item>
-        <el-form-item label="总人数" prop="total_people">
-          <el-input-number 
-            v-model="revenueFormData.total_people" 
-            :min="0" 
-            :precision="0"
-            :controls="false"
-            style="width: 100%" 
-            placeholder="请输入总人数"
-          />
-        </el-form-item>
-        <el-form-item label="总次数" prop="total_times">
-          <el-input-number 
-            v-model="revenueFormData.total_times" 
-            :min="0" 
-            :precision="0"
-            :controls="false"
-            style="width: 100%" 
-            placeholder="请输入总次数"
+            placeholder="请输入广告收入金额"
           />
         </el-form-item>
         <el-form-item label="备注">
@@ -263,6 +246,7 @@ const tableContainer = ref(null)
 const tableRef = ref(null)
 const revenueFormRef = ref(null)
 const remarkFormRef = ref(null)
+const revenueCashInputRef = ref(null)
 
 const dateRange = ref([])
 const tableData = reactive({ list: [], total: 0 })
@@ -278,17 +262,11 @@ const revenueFormData = ref({
   _id: '',
   statement_date: '',
   total_cash: 0,
-  total_score: 0,
-  total_people: 0,
-  total_times: 0,
   remark: ''
 })
 
 const revenueFormRules = {
-  total_cash: [{ required: true, message: '请输入总奖励', trigger: 'blur' }],
-  total_score: [{ required: true, message: '请输入总积分', trigger: 'blur' }],
-  total_people: [{ required: true, message: '请输入总人数', trigger: 'blur' }],
-  total_times: [{ required: true, message: '请输入总次数', trigger: 'blur' }]
+  total_cash: [{ required: true, message: '请输入广告收入', trigger: 'blur' }]
 }
 
 // 编辑备注弹窗
@@ -405,13 +383,15 @@ const handleFillRevenue = (row) => {
   revenueFormData.value = {
     _id: row._id,
     statement_date: row.statement_date,
-    total_cash: row.total_cash || 0,
-    total_score: row.total_score || 0,
-    total_people: row.total_people || 0,
-    total_times: row.total_times || 0,
+    total_cash: row.total_cash || "",
+    total_score: row.total_score || "",
     remark: row.remark || ''
   }
   revenueDialogVisible.value = true
+  // 弹窗打开后自动聚焦到广告收入输入框
+  setTimeout(() => {
+    revenueCashInputRef.value?.focus()
+  }, 300);
 }
 
 const handleRevenueSubmit = async () => {
@@ -425,7 +405,11 @@ const handleRevenueSubmit = async () => {
   try {
     await sfCo.action({
       name: 'admin/adDailyRevenueRecord/fillRevenue',
-      data: revenueFormData.value
+      data: {
+        ...revenueFormData.value,
+        total_cash: Number(revenueFormData.value.total_cash),
+        total_score: Number(revenueFormData.value.total_score)
+      }
     })
     ElMessage.success('填写成功')
     revenueDialogVisible.value = false
@@ -746,6 +730,13 @@ page {
         }
       }
     }
+  }
+}
+
+/* 广告收入输入框文字左对齐 */
+:deep(.text-left-input) {
+  .el-input__inner {
+    text-align: left !important;
   }
 }
 </style>

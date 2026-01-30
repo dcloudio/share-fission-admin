@@ -48,21 +48,19 @@ module.exports = {
    * @param {string} data._id - 记录ID
    * @param {number} data.total_cash - 总奖励
    * @param {number} data.total_score - 总积分
-   * @param {number} data.total_people - 总人数
-   * @param {number} data.total_times - 总次数
    * @param {string} [data.remark] - 备注
    * @returns {Promise<Object>} 返回操作结果
    */
   async fillRevenue(data = {}) {
-    const { _id, total_cash, total_score, total_people, total_times } = data;
-    
+    const { _id, total_cash, total_score, remark = '' } = data;
     if (!_id) return fail(400001, { name: '_id' });
     if (total_cash === undefined || total_cash === null) return fail(400001, { name: 'total_cash' });
+    if (typeof total_cash !== 'number' || total_cash < 0) return fail(400002, { name: 'total_cash', message: '总奖励必须是非负数' });
     if (total_score === undefined || total_score === null) return fail(400001, { name: 'total_score' });
-    if (total_people === undefined || total_people === null) return fail(400001, { name: 'total_people' });
-    if (total_times === undefined || total_times === null) return fail(400001, { name: 'total_times' });
-    
-    return await service.adDailyRevenueRecord.fillRevenue(data);
+    if (typeof total_score !== 'number' || total_score < 0) return fail(400002, { name: 'total_score', message: '总积分必须是非负数' });
+    await service.adDailyRevenueRecord.fillRevenue(data);
+    await service.fundPoolLogs.addFund(total_cash, remark, total_score);
+    return { success: true };
   },
   
   /**
