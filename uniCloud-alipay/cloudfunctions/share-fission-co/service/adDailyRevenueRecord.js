@@ -186,12 +186,10 @@ class AdDailyRevenueRecordService extends BaseService {
     if (record.is_settled) {
       throw new Error('该记录已结算，无法修改');
     }
-    const _ = this._;
     const transaction = await this.db.startTransaction();
 
     try {
       const now = Date.now();
-      const { Tables } = require('../constants');
 
       // 1. 更新广告收益记录
       const updateData = {
@@ -206,52 +204,16 @@ class AdDailyRevenueRecordService extends BaseService {
 
       await transaction.collection(this.tableName).doc(_id).update(updateData);
 
-      // 2. 更新资金池
-      const poolUpdateData = {
-        total_cash: _.inc(total_cash),
-        update_time: now
-      };
-      if (total_score > 0) {
-        poolUpdateData.total_score = _.inc(total_score);
-      }
-
-      const poolResult = await transaction.collection(Tables.fundPool).doc('main').updateAndReturn(poolUpdateData);
-
-      if (!poolResult.doc) {
-        throw new Error('更新资金池失败');
-      }
-
-      const updatedPool = poolResult.doc;
-      const cash_balance = updatedPool.total_cash;
-      const score_balance = updatedPool.total_score || 0;
-
-      // 3. 重新计算汇率
-      let new_exchange_rate = updatedPool.exchange_rate;
-      if (score_balance > 0) {
-        new_exchange_rate = Math.floor((cash_balance / score_balance) * 10000) / 10000;
-      }
-
-      // 4. 如果汇率有变化，更新资金池的汇率
-      if (new_exchange_rate !== updatedPool.exchange_rate) {
-        await transaction.collection(Tables.fundPool).doc('main').update({
-          exchange_rate: new_exchange_rate
-        });
-      }
-
-      // 5. 添加资金池流水日志
-      const log = {
-        type: 'ad_income',
+      // 2. 调用资金池服务的通用方法更新资金池和记录流水
+      const fundPoolLogsService = require('./fundPoolLogs');
+      const poolResult = await fundPoolLogsService._updatePoolInTransaction(transaction, {
         cash_change: total_cash,
         score_change: total_score,
-        cash_balance: cash_balance,
-        score_balance: score_balance,
-        exchange_rate: new_exchange_rate,
-        related_id: _id,
+        type: 'ad_income',
         remark: remark || '广告收入',
+        related_id: _id,
         create_time: now
-      };
-
-      await transaction.collection(Tables.fundPoolLogs).add(log);
+      });
 
       // 提交事务
       await transaction.commit();
@@ -262,8 +224,8 @@ class AdDailyRevenueRecordService extends BaseService {
         data: {
           total_cash,
           total_score,
-          cash_balance,
-          exchange_rate: new_exchange_rate
+          cash_balance: poolResult.cash_balance,
+          exchange_rate: poolResult.exchange_rate
         }
       };
     } catch (error) {
