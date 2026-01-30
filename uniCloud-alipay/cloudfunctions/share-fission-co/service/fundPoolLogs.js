@@ -165,6 +165,78 @@ class FundPoolLogsService extends BaseService {
       total: totalResult.total
     };
   }
+
+  /**
+   * 投入资金到资金池
+   * @async
+   * @function addFund
+   * @description 管理员向资金池投入资金，先更新资金池余额和汇率，再记录流水日志
+   * @param {number} amount - 投入金额（元）
+   * @param {string} [remark=''] - 备注说明
+   * @returns {Promise<Object>} 返回操作结果
+   * @throws {Error} 当投入金额无效时抛出错误
+   * @example
+   * const result = await fundPoolLogsService.addFund(1000, '初始资金投入');
+   */
+  async addFund(amount, remark = '') {
+    if (!amount || amount <= 0) {
+      throw new Error('投入金额必须大于0');
+    }
+
+    const now = Date.now();
+
+    // 使用 updateAndReturn 先更新 sf-fund-pool 表，获取更新后的精确值
+    const { doc: updatedPool } = await this.poolCollection.doc('main').updateAndReturn({
+      total_cash: this._.inc(amount),
+      update_time: now
+    });
+
+    // 检查更新是否成功
+    if (!updatedPool) {
+      throw new Error('更新资金池失败');
+    }
+
+    // 获取更新后的资金池数据
+    const cash_balance = updatedPool.total_cash;
+    const score_balance = updatedPool.total_score || 0;
+
+    // 重新计算汇率：exchange_rate = total_cash / total_score
+    let new_exchange_rate = updatedPool.exchange_rate;
+    if (score_balance > 0) {
+      new_exchange_rate = parseFloat((cash_balance / score_balance).toFixed(4));
+    }
+
+    // 如果汇率有变化，更新资金池的汇率
+    if (new_exchange_rate !== updatedPool.exchange_rate) {
+      await this.poolCollection.doc('main').update({
+        exchange_rate: new_exchange_rate
+      });
+    }
+
+    // 添加资金池流水日志
+    const log = {
+      type: 'deposit', // 投入资金类型
+      cash_change: amount,
+      score_change: 0,
+      cash_balance: cash_balance,
+      score_balance: score_balance,
+      exchange_rate: new_exchange_rate,
+      remark: remark || '管理员投入资金',
+      create_time: now
+    };
+
+    await this.collection.add(log);
+
+    return {
+      success: true,
+      message: '投入资金成功',
+      data: {
+        amount,
+        cash_balance,
+        exchange_rate: new_exchange_rate
+      }
+    };
+  }
 }
 
 module.exports = new FundPoolLogsService();

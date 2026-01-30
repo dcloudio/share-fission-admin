@@ -24,5 +24,19 @@ module.exports = {
   // 查流水列表
   async getList(data = {}) {
     return await service.fundPoolLogs.getList(data);
+  },
+  // 投入资金
+  async addFund(data = {}) {
+    const { amount, remark } = data;
+    
+    // 参数校验
+    if (!amount || amount <= 0) {
+      return {
+        errCode: 400,
+        errMsg: '投入金额必须大于0'
+      };
+    }
+    
+    return await service.fundPoolLogs.addFund(amount, remark);
   }
 }

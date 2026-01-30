@@ -7,7 +7,10 @@
     <view class="fund-pool-card" v-loading="poolLoading">
       <view class="pool-item">
         <text class="pool-label">现金余额</text>
-        <text class="pool-value cash">¥ {{ formatNumber(fundPool.total_cash) }}</text>
+        <view class="pool-value-row">
+          <text class="pool-value cash">¥ {{ formatNumber(fundPool.total_cash) }}</text>
+          <el-button type="primary" size="small" @click="showAddFundDialog">投入资金</el-button>
+        </view>
       </view>
       <view class="pool-item">
         <text class="pool-label">积分余额</text>
@@ -22,6 +25,43 @@
         <text class="pool-value time">{{ formatTime(fundPool.update_time) }}</text>
       </view>
     </view>
+
+    <!-- 投入资金弹窗 -->
+    <el-dialog
+      v-model="addFundDialogVisible"
+      title="投入资金"
+      width="400px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="addFundForm" :rules="addFundRules" ref="addFundFormRef" label-width="100px">
+        <el-form-item label="投入金额" prop="amount">
+          <el-input-number
+            v-model="addFundForm.amount"
+            :min="0.01"
+            :precision="2"
+            :step="100"
+            placeholder="请输入投入金额"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="addFundForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息（可选）"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="addFundDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAddFund" :loading="addFundLoading">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
 
     <!-- 工具栏区域 -->
     <view class="toolbar">
@@ -203,7 +243,8 @@ const pageConfig = reactive({
 const typeOptions = [
   { label: '广告收入', value: 'ad_income' },
   { label: '提现支出', value: 'withdrawal' },
-  { label: '手续费返还', value: 'fee_return' }
+  { label: '手续费返还', value: 'fee_return' },
+  { label: '投入资金', value: 'deposit' }
 ]
 
 // ========== 状态 ==========
@@ -214,6 +255,22 @@ const dateRange = ref(null)
 const tableHeight = ref(500)
 const tableContainer = ref(null)
 const tableRef = ref(null)
+
+// 投入资金相关
+const addFundDialogVisible = ref(false)
+const addFundLoading = ref(false)
+const addFundFormRef = ref(null)
+const addFundForm = reactive({
+  amount: null,
+  remark: ''
+})
+
+const addFundRules = {
+  amount: [
+    { required: true, message: '请输入投入金额', trigger: 'blur' },
+    { type: 'number', min: 0.01, message: '金额必须大于0', trigger: 'blur' }
+  ]
+}
 
 // 资金池信息
 const fundPool = reactive({
@@ -311,12 +368,22 @@ const formatTime = (timestamp) => {
 }
 
 const getTypeTagType = (type) => {
-  const map = { 'ad_income': 'success', 'withdrawal': 'danger', 'fee_return': 'warning' }
+  const map = { 
+    'ad_income': 'success', 
+    'withdrawal': 'danger', 
+    'fee_return': 'warning',
+    'deposit': 'primary'
+  }
   return map[type] || 'info'
 }
 
 const getTypeLabel = (type) => {
-  const map = { 'ad_income': '广告收入', 'withdrawal': '提现支出', 'fee_return': '手续费返还' }
+  const map = { 
+    'ad_income': '广告收入', 
+    'withdrawal': '提现支出', 
+    'fee_return': '手续费返还',
+    'deposit': '投入资金'
+  }
   return map[type] || type || '-'
 }
 
@@ -365,6 +432,45 @@ const handleSort = (field) => {
   loadData()
 }
 
+// 显示投入资金弹窗
+const showAddFundDialog = () => {
+  addFundForm.amount = null
+  addFundForm.remark = ''
+  addFundDialogVisible.value = true
+  nextTick(() => {
+    addFundFormRef.value?.clearValidate()
+  })
+}
+
+// 处理投入资金
+const handleAddFund = async () => {
+  try {
+    await addFundFormRef.value?.validate()
+  } catch (e) {
+    return
+  }
+
+  addFundLoading.value = true
+  try {
+    await sfCo.action({
+      name: 'admin/fundPoolLogs/addFund',
+      data: {
+        amount: addFundForm.amount,
+        remark: addFundForm.remark
+      }
+    })
+    ElMessage.success('投入资金成功')
+    addFundDialogVisible.value = false
+    // 重新加载数据
+    await loadFundPool()
+    await loadData()
+  } catch (e) {
+    ElMessage.error(e.message || '投入资金失败')
+  } finally {
+    addFundLoading.value = false
+  }
+}
+
 // ========== 生命周期 ==========
 onLoad(() => {
   loadFundPool()
@@ -403,6 +509,12 @@ page {
     .pool-label {
       font-size: 14px;
       color: #909399;
+    }
+
+    .pool-value-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .pool-value {
