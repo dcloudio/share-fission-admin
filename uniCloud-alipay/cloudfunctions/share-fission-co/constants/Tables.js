@@ -18,6 +18,8 @@ const Tables = {
   withdrawalLogs: 'sf-withdrawal-logs',
   // 广告观看记录表
   adWatchLogs: 'sf-ad-watch-logs',
+  // 每日广告收益记录表
+  adDailyRevenueRecord: 'sf-ad-daily-revenue-record',
   // 资金池表
   fundPool: 'sf-fund-pool',
   // 资金池流水表

@@ -52,6 +52,12 @@ const withdrawalLogs = require('./withdrawalLogs');
 const adWatchLogs = require('./adWatchLogs');
 
 /**
+ * 每日广告收益记录服务
+ * @type {import('./adDailyRevenueRecord')}
+ */
+const adDailyRevenueRecord = require('./adDailyRevenueRecord');
+
+/**
  * 资金池流水服务
  * @type {import('./fundPoolLogs')}
  */
@@ -100,6 +106,8 @@ module.exports = {
   withdrawalLogs,
   /** @see module:service/adWatchLogs */
   adWatchLogs,
+  /** @see module:service/adDailyRevenueRecord */
+  adDailyRevenueRecord,
   /** @see module:service/fundPoolLogs */
   fundPoolLogs,
   /** @see module:service/goods */

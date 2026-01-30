@@ -70,9 +70,12 @@ export default {
         },
         {
           menu_id: "sf-admin-ad",
-          text: '广告观看记录',
+          text: '广告管理',
           icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/ad-watch-logs/list'
+          children: [
+            { menu_id: "sf-admin-ad-watch-logs", text: '广告观看记录', value: '/pages/sf-admin/ad-watch-logs/list' },
+            { menu_id: "sf-admin-ad-daily-revenue-record", text: '每日广告收益', value: '/pages/sf-admin/ad-daily-revenue-record/list' }
+          ]
         },
         {
           menu_id: "sf-admin-shop",
