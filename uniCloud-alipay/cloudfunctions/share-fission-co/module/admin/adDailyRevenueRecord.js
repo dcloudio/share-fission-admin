@@ -58,9 +58,9 @@ module.exports = {
     if (typeof total_cash !== 'number' || total_cash < 0) return fail(400002, { name: 'total_cash', message: '总奖励必须是非负数' });
     if (total_score === undefined || total_score === null) return fail(400001, { name: 'total_score' });
     if (typeof total_score !== 'number' || total_score < 0) return fail(400002, { name: 'total_score', message: '总积分必须是非负数' });
-    await service.adDailyRevenueRecord.fillRevenue(data);
-    await service.fundPoolLogs.addFund(total_cash, remark, total_score);
-    return { success: true };
+    
+    // 使用事务确保数据一致性
+    return await service.adDailyRevenueRecord.fillRevenueWithTransaction(data);
   },
   
   /**

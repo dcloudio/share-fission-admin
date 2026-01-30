@@ -59,13 +59,13 @@ class AdDailyRevenueRecordService extends BaseService {
    * });
    */
   async getList(data = {}) {
-    let { 
-      pageIndex = 1, 
-      pageSize = 20, 
-      startDate = '', 
-      endDate = '', 
-      sortField = 'statement_date', 
-      sortOrder = 'desc' 
+    let {
+      pageIndex = 1,
+        pageSize = 20,
+        startDate = '',
+        endDate = '',
+        sortField = 'statement_date',
+        sortOrder = 'desc'
     } = data;
 
     // 构建查询条件数组
@@ -137,50 +137,6 @@ class AdDailyRevenueRecordService extends BaseService {
   }
 
   /**
-   * 填写广告收入
-   * @async
-   * @function fillRevenue
-   * @description 填写每日广告收益数据，并标记为已结算
-   * @param {Object} data - 收益数据
-   * @param {string} data._id - 记录ID
-   * @param {number} data.total_cash - 总奖励
-   * @param {number} data.total_score - 总积分
-   * @param {number} data.total_people - 总人数
-   * @param {number} data.total_times - 总次数
-   * @param {string} [data.remark] - 备注
-   * @returns {Promise<Object>} 返回更新结果
-   */
-  async fillRevenue(data) {
-    const { _id, total_cash, total_score, total_people, total_times, remark } = data;
-    
-    if (!_id) {
-      throw new Error('记录ID不能为空');
-    }
-
-    // 检查记录是否存在
-    const record = await this.getById(_id);
-    if (record.is_settled) {
-      throw new Error('该记录已结算，无法修改');
-    }
-
-    const updateData = {
-      total_cash,
-      total_score,
-      total_people,
-      total_times,
-      is_settled: true,
-      update_time: Date.now()
-    };
-
-    if (remark !== undefined) {
-      updateData.remark = remark;
-    }
-
-    const res = await this.collection.doc(_id).update(updateData);
-    return res;
-  }
-
-  /**
    * 更新备注
    * @async
    * @function updateRemark
@@ -204,6 +160,117 @@ class AdDailyRevenueRecordService extends BaseService {
 
     const res = await this.collection.doc(id).update(updateData);
     return res;
+  }
+
+  /**
+   * 填写广告收入并更新资金池（事务）
+   * @async
+   * @function fillRevenueWithTransaction
+   * @description 使用事务确保填写广告收益和更新资金池的原子性操作
+   * @param {Object} data - 收益数据
+   * @param {string} data._id - 记录ID
+   * @param {number} data.total_cash - 总奖励
+   * @param {number} data.total_score - 总积分
+   * @param {string} [data.remark] - 备注
+   * @returns {Promise<Object>} 返回操作结果
+   */
+  async fillRevenueWithTransaction(data) {
+    const { _id, total_cash, total_score, remark = '' } = data;
+
+    if (!_id) {
+      throw new Error('记录ID不能为空');
+    }
+
+    // 检查记录是否存在
+    const record = await this.getById(_id);
+    if (record.is_settled) {
+      throw new Error('该记录已结算，无法修改');
+    }
+    const _ = this._;
+    const transaction = await this.db.startTransaction();
+
+    try {
+      const now = Date.now();
+      const { Tables } = require('../constants');
+
+      // 1. 更新广告收益记录
+      const updateData = {
+        total_cash,
+        total_score,
+        is_settled: true,
+        update_time: now
+      };
+      if (remark !== undefined) {
+        updateData.remark = remark;
+      }
+
+      await transaction.collection(this.tableName).doc(_id).update(updateData);
+
+      // 2. 更新资金池
+      const poolUpdateData = {
+        total_cash: _.inc(total_cash),
+        update_time: now
+      };
+      if (total_score > 0) {
+        poolUpdateData.total_score = _.inc(total_score);
+      }
+
+      const poolResult = await transaction.collection(Tables.fundPool).doc('main').updateAndReturn(poolUpdateData);
+
+      if (!poolResult.doc) {
+        throw new Error('更新资金池失败');
+      }
+
+      const updatedPool = poolResult.doc;
+      const cash_balance = updatedPool.total_cash;
+      const score_balance = updatedPool.total_score || 0;
+
+      // 3. 重新计算汇率
+      let new_exchange_rate = updatedPool.exchange_rate;
+      if (score_balance > 0) {
+        new_exchange_rate = Math.floor((cash_balance / score_balance) * 10000) / 10000;
+      }
+
+      // 4. 如果汇率有变化，更新资金池的汇率
+      if (new_exchange_rate !== updatedPool.exchange_rate) {
+        await transaction.collection(Tables.fundPool).doc('main').update({
+          exchange_rate: new_exchange_rate
+        });
+      }
+
+      // 5. 添加资金池流水日志
+      const log = {
+        type: 'ad_income',
+        cash_change: total_cash,
+        score_change: total_score,
+        cash_balance: cash_balance,
+        score_balance: score_balance,
+        exchange_rate: new_exchange_rate,
+        related_id: _id,
+        remark: remark || '广告收入',
+        create_time: now
+      };
+
+      await transaction.collection(Tables.fundPoolLogs).add(log);
+
+      // 提交事务
+      await transaction.commit();
+
+      return {
+        success: true,
+        message: '填写广告收入成功',
+        data: {
+          total_cash,
+          total_score,
+          cash_balance,
+          exchange_rate: new_exchange_rate
+        }
+      };
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
+    }
   }
 }
 

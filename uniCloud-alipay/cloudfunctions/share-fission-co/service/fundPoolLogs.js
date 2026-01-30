@@ -198,64 +198,76 @@ class FundPoolLogsService extends BaseService {
       throw new Error('投入金额必须大于0');
     }
 
-    const now = Date.now();
+    const transaction = await this.db.startTransaction();
 
-    // 使用 updateAndReturn 先更新 sf-fund-pool 表，获取更新后的精确值
-    const updateData = {
-      total_cash: this._.inc(amount),
-      update_time: now
-    };
-    if (score > 0) {
-      updateData.total_score = this._.inc(score);
-    }
-    const { doc: updatedPool } = await this.poolCollection.doc('main').updateAndReturn(updateData);
+    try {
+      const now = Date.now();
 
-    // 检查更新是否成功
-    if (!updatedPool) {
-      throw new Error('更新资金池失败');
-    }
-
-    // 获取更新后的资金池数据
-    const cash_balance = updatedPool.total_cash;
-    const score_balance = updatedPool.total_score || 0;
-
-    // 重新计算汇率：exchange_rate = total_cash / total_score
-    let new_exchange_rate = updatedPool.exchange_rate;
-    if (score_balance > 0) {
-      new_exchange_rate = Math.floor((cash_balance / score_balance) * 10000) / 10000; // 向下取四位小数
-    }
-
-    // 如果汇率有变化，更新资金池的汇率
-    if (new_exchange_rate !== updatedPool.exchange_rate) {
-      await this.poolCollection.doc('main').update({
-        exchange_rate: new_exchange_rate
-      });
-    }
-
-    // 添加资金池流水日志
-    const log = {
-      type: 'deposit', // 投入资金类型
-      cash_change: amount,
-      score_change: score,
-      cash_balance: cash_balance,
-      score_balance: score_balance,
-      exchange_rate: new_exchange_rate,
-      remark: remark || '管理员投入资金',
-      create_time: now
-    };
-
-    await this.collection.add(log);
-
-    return {
-      success: true,
-      message: '投入资金成功',
-      data: {
-        amount,
-        score,
-        cash_balance,
-        exchange_rate: new_exchange_rate
+      // 使用 updateAndReturn 先更新 sf-fund-pool 表，获取更新后的精确值
+      const updateData = {
+        total_cash: this._.inc(amount),
+        update_time: now
+      };
+      if (score > 0) {
+        updateData.total_score = this._.inc(score);
       }
-    };
+      
+      const { doc: updatedPool } = await transaction.collection(Tables.fundPool).doc('main').updateAndReturn(updateData);
+
+      // 检查更新是否成功
+      if (!updatedPool) {
+        throw new Error('更新资金池失败');
+      }
+
+      // 获取更新后的资金池数据
+      const cash_balance = updatedPool.total_cash;
+      const score_balance = updatedPool.total_score || 0;
+
+      // 重新计算汇率：exchange_rate = total_cash / total_score
+      let new_exchange_rate = updatedPool.exchange_rate;
+      if (score_balance > 0) {
+        new_exchange_rate = Math.floor((cash_balance / score_balance) * 10000) / 10000; // 向下取四位小数
+      }
+
+      // 如果汇率有变化，更新资金池的汇率
+      if (new_exchange_rate !== updatedPool.exchange_rate) {
+        await transaction.collection(Tables.fundPool).doc('main').update({
+          exchange_rate: new_exchange_rate
+        });
+      }
+
+      // 添加资金池流水日志
+      const log = {
+        type: 'deposit', // 投入资金类型
+        cash_change: amount,
+        score_change: score,
+        cash_balance: cash_balance,
+        score_balance: score_balance,
+        exchange_rate: new_exchange_rate,
+        remark: remark || '管理员投入资金',
+        create_time: now
+      };
+
+      await transaction.collection(this.tableName).add(log);
+
+      // 提交事务
+      await transaction.commit();
+
+      return {
+        success: true,
+        message: '投入资金成功',
+        data: {
+          amount,
+          score,
+          cash_balance,
+          exchange_rate: new_exchange_rate
+        }
+      };
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
+    }
   }
 }
 
