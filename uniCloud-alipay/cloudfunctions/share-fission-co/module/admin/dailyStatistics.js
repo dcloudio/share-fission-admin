@@ -20,5 +20,14 @@ module.exports = {
   // 查列表
   async getList(data = {}) {
     return await service.dailyStatistics.getList(data);
+  },
+  // 填写广告收入
+  async fillRevenue(data = {}) {
+    return await service.dailyStatistics.fillRevenue(data);
+  },
+  // 更新备注
+  async updateRemark(data = {}) {
+    const { _id, remark } = data;
+    return await service.dailyStatistics.updateRemark(_id, remark);
   }
 }

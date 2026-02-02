@@ -111,6 +111,120 @@ class DailyStatisticsService extends BaseService {
       total: totalResult.total
     };
   }
+
+  /**
+   * 根据ID查询记录详情
+   * @async
+   * @function getById
+   * @param {string} id - 记录ID
+   * @returns {Promise<DailyStatistics>} 返回记录详情
+   */
+  async getById(id) {
+    const res = await this.collection.doc(id).get();
+    if (!res.data || res.data.length === 0) {
+      throw new Error('记录不存在');
+    }
+    return res.data[0];
+  }
+
+  /**
+   * 更新备注
+   * @async
+   * @function updateRemark
+   * @description 更新记录的备注信息
+   * @param {string} id - 记录ID
+   * @param {string} remark - 备注内容
+   * @returns {Promise<Object>} 返回更新结果
+   */
+  async updateRemark(id, remark) {
+    if (!id) {
+      throw new Error('记录ID不能为空');
+    }
+
+    // 检查记录是否存在
+    await this.getById(id);
+
+    const updateData = {
+      remark: remark || '',
+      update_time: Date.now()
+    };
+
+    const res = await this.collection.doc(id).update(updateData);
+    return res;
+  }
+
+  /**
+   * 填写广告收入并更新资金池（事务）
+   * @async
+   * @function fillRevenue
+   * @description 使用事务确保填写广告收益和更新资金池的原子性操作
+   * @param {Object} data - 收益数据
+   * @param {string} data._id - 记录ID (YYYY-MM-DD)
+   * @param {number} data.ad_revenue - 广告收入
+   * @param {number} data.score_added - 新增积分
+   * @param {string} [data.remark] - 备注
+   * @returns {Promise<Object>} 返回操作结果
+   */
+  async fillRevenue(data) {
+    const { _id, ad_revenue, score_added, remark = '' } = data;
+
+    if (!_id) {
+      throw new Error('记录ID不能为空');
+    }
+
+    // 检查记录是否存在
+    const record = await this.getById(_id);
+    if (record.is_settled) {
+      throw new Error('该记录已结算，无法修改');
+    }
+    const transaction = await this.db.startTransaction();
+
+    try {
+      const now = Date.now();
+
+      // 1. 更新统计记录
+      const updateData = {
+        ad_revenue,
+        // score_added, // score_added通常是统计出来的，这里主要是确认结算，所以主要更新ad_revenue和is_settled
+        is_settled: true,
+        update_time: now
+      };
+      if (remark !== undefined) {
+        updateData.remark = remark;
+      }
+
+      await transaction.collection(this.tableName).doc(_id).update(updateData);
+
+      // 2. 调用资金池服务的通用方法更新资金池和记录流水
+      const fundPoolLogsService = require('./fundPoolLogs');
+      const poolResult = await fundPoolLogsService._updatePoolInTransaction(transaction, {
+        cash_change: ad_revenue,
+        score_change: score_added || 0, // 结算时将新增积分计入资金池（如果有变动逻辑）
+        type: 'ad_income',
+        remark: remark || '广告收入结算',
+        related_id: _id,
+        create_time: now
+      });
+
+      // 提交事务
+      await transaction.commit();
+
+      return {
+        success: true,
+        message: '填写广告收入成功',
+        data: {
+          ad_revenue,
+          score_added,
+          cash_balance: poolResult.cash_balance,
+          exchange_rate: poolResult.exchange_rate
+        }
+      };
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
+    }
+  }
 }
 
 module.exports = new DailyStatisticsService();

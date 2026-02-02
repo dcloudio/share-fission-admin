@@ -11,8 +11,8 @@
     "path": "",
     "triggers": [{
       "type": "timer",
-      "name": "calcPointRatioDaily",
-      "config": "0 5 0 * * * *"
+      "name": "timer",
+      "config": "5 0 0 * * * *"
     }]
   }
 }

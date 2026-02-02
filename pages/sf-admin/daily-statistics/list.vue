@@ -55,7 +55,7 @@
               :height="tableHeight"
               :row-height="54"
               :header-height="48"
-              row-key="_id"
+              row-key="statement_date"
               fixed
               :row-class="getRowClass"
             >
@@ -81,8 +81,19 @@
                 <template v-else-if="column.key === 'exchange_rate'">
                   <span>{{ rowData[column.key]?.toFixed(4) || '-' }}</span>
                 </template>
-                <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score'].includes(column.key)">
+                <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score', 'viewers_count', 'views_count'].includes(column.key)">
                   <span class="score-text">{{ formatNumber(rowData[column.key]) }}</span>
+                </template>
+                <template v-else-if="column.key === 'is_settled'">
+                  <el-tag :type="rowData[column.key] ? 'success' : 'warning'" size="small" :disable-transitions="true">
+                    {{ rowData[column.key] ? '已结算' : '未结算' }}
+                  </el-tag>
+                </template>
+                <template v-else-if="column.key === 'actions'">
+                  <view class="row-actions">
+                    <el-button v-if="!rowData.is_settled" type="primary" size="small" link @click="handleFillRevenue(rowData)">填写广告收入</el-button>
+                    <el-button type="primary" size="small" link @click="handleEditRemark(rowData)">备注</el-button>
+                  </view>
                 </template>
                 <template v-else>{{ rowData[column.key] ?? '-' }}</template>
               </template>
@@ -98,6 +109,9 @@
             <view class="card-header">
               <view class="header-main">
                 <text class="card-title">{{ item._id }}</text>
+                <el-tag :type="item.is_settled ? 'success' : 'warning'" size="small">
+                  {{ item.is_settled ? '已结算' : '未结算' }}
+                </el-tag>
               </view>
               <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
             </view>
@@ -127,6 +141,19 @@
                 <text class="label">资金池</text>
                 <text class="value price">{{ formatMoney(item.total_cash) }} 元</text>
               </view>
+              <view class="info-row" v-if="item.remark">
+                <text class="label">备注</text>
+                <text class="value">{{ item.remark }}</text>
+              </view>
+            </view>
+
+            <view class="card-footer">
+              <el-button v-if="!item.is_settled" type="primary" link size="small" @click="handleFillRevenue(item)">
+                <el-icon><Money /></el-icon> 填写广告收入
+              </el-button>
+              <el-button type="primary" link size="small" @click="handleEditRemark(item)">
+                <el-icon><Edit /></el-icon> 备注
+              </el-button>
             </view>
           </view>
         </template>
@@ -150,6 +177,85 @@
         />
       </view>
     </view>
+
+    <!-- 填写广告收入弹窗 -->
+    <el-dialog
+      v-model="revenueDialogVisible"
+      title="填写广告收入"
+      width="400px"
+      destroy-on-close
+    >
+      <el-alert
+        type="warning"
+        :closable="false"
+        style="margin-bottom: 20px;"
+      >
+        <template #default>
+          <text style="font-size: 14px;">填写广告收入后，该记录将变为<strong>已结算</strong>状态，对应的金额和积分将进入奖池。</text>
+        </template>
+      </el-alert>
+      <el-form ref="revenueFormRef" :model="revenueFormData" :rules="revenueFormRules" label-width="100px">
+        <el-form-item label="结算日期">
+          <el-input v-model="revenueFormData.statement_date" disabled />
+        </el-form-item>
+        <el-form-item label="新增积分">
+          <el-input v-model="revenueFormData.score_added" disabled />
+        </el-form-item>
+        <el-form-item label="广告收入" prop="ad_revenue">
+          <el-input
+            ref="revenueCashInputRef"
+            v-model="revenueFormData.ad_revenue" 
+            type="number"
+            min="0"
+            class="text-left-input"
+            style="width: 100%" 
+            placeholder="请输入广告收入金额"
+          />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input 
+            v-model="revenueFormData.remark" 
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息（可选）"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="revenueDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleRevenueSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑备注弹窗 -->
+    <el-dialog
+      v-model="remarkDialogVisible"
+      title="编辑备注"
+      width="500px"
+      destroy-on-close
+    >
+      <el-form ref="remarkFormRef" :model="remarkFormData" label-width="100px">
+        <el-form-item label="结算日期">
+          <el-input v-model="remarkFormData.statement_date" disabled />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input 
+            v-model="remarkFormData.remark" 
+            type="textarea"
+            :rows="5"
+            placeholder="请输入备注信息"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="remarkDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleRemarkSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </view>
 </template>
 
@@ -157,7 +263,7 @@
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage } from 'element-plus'
-import { CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { Edit, Money, CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { columns, chartGroups } from './options.js'
 
@@ -220,12 +326,39 @@ const pagination = reactive({ currentPage: 1, pageSize: 20 })
 // 排序相关
 const sortState = reactive({ field: '_id', order: 'desc' })
 
+// 填写广告收入弹窗
+const revenueDialogVisible = ref(false)
+const submitLoading = ref(false)
+const revenueCashInputRef = ref(null)
+const revenueFormRef = ref(null)
+const revenueFormData = ref({
+  _id: '',
+  statement_date: '',
+  ad_revenue: 0,
+  score_added: 0,
+  remark: ''
+})
+
+const revenueFormRules = {
+  ad_revenue: [{ required: true, message: '请输入广告收入', trigger: 'blur' }]
+}
+
+// 编辑备注弹窗
+const remarkDialogVisible = ref(false)
+const remarkFormRef = ref(null)
+const remarkFormData = ref({
+  _id: '',
+  statement_date: '',
+  remark: ''
+})
+
 // ========== 计算属性 ==========
 const tableColumns = ref([...columns])
 
 const computedColumns = computed(() => [
   { key: 'index', title: '序号', width: 70, align: 'center' },
-  ...tableColumns.value
+  ...tableColumns.value,
+  { key: 'actions', title: '操作', width: 200, align: 'center', fixed: 'right' }
 ])
 
 // ========== 方法 ==========
@@ -286,7 +419,7 @@ const updateChart = () => {
   if (!group) return
 
   // 按日期升序排列
-  const sortedList = [...tableData.list].sort((a, b) => a._id.localeCompare(b._id))
+  const sortedList = [...tableData.list].sort((a, b) => a.statement_date.localeCompare(b.statement_date))
 
   const option = {
     tooltip: {
@@ -307,7 +440,7 @@ const updateChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: sortedList.map(item => item._id),
+      data: sortedList.map(item => item.statement_date),
       axisLabel: { color: '#666' },
       axisLine: { lineStyle: { color: '#ddd' } }
     },
@@ -398,6 +531,79 @@ const handleSort = (field) => {
   }
   pagination.currentPage = 1
   loadData()
+}
+
+// 填写广告收入
+const handleFillRevenue = (row) => {
+  revenueFormData.value = {
+    _id: row._id,
+    statement_date: row.statement_date,
+    ad_revenue: row.ad_revenue || "",
+    score_added: row.score_added || 0,
+    remark: row.remark || ''
+  }
+  revenueDialogVisible.value = true
+  setTimeout(() => {
+    revenueCashInputRef.value?.focus()
+  }, 300);
+}
+
+const handleRevenueSubmit = async () => {
+  try {
+    await revenueFormRef.value.validate()
+  } catch {
+    return
+  }
+
+  submitLoading.value = true
+  try {
+    await sfCo.action({
+      name: 'admin/dailyStatistics/fillRevenue',
+      data: {
+        _id: revenueFormData.value._id,
+        ad_revenue: Number(revenueFormData.value.ad_revenue),
+        score_added: Number(revenueFormData.value.score_added),
+        remark: revenueFormData.value.remark
+      }
+    })
+    ElMessage.success('填写成功')
+    revenueDialogVisible.value = false
+    loadData()
+  } catch (e) {
+    ElMessage.error(e.message || '操作失败')
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+// 编辑备注
+const handleEditRemark = (row) => {
+  remarkFormData.value = {
+    _id: row._id,
+    statement_date: row.statement_date,
+    remark: row.remark || ''
+  }
+  remarkDialogVisible.value = true
+}
+
+const handleRemarkSubmit = async () => {
+  submitLoading.value = true
+  try {
+    await sfCo.action({
+      name: 'admin/dailyStatistics/updateRemark',
+      data: {
+        _id: remarkFormData.value._id,
+        remark: remarkFormData.value.remark
+      }
+    })
+    ElMessage.success('备注更新成功')
+    remarkDialogVisible.value = false
+    loadData()
+  } catch (e) {
+    ElMessage.error(e.message || '操作失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 // ========== 生命周期 ==========
@@ -713,6 +919,37 @@ page {
         }
       }
     }
+  }
+}
+/* 广告收入输入框文字左对齐 */
+:deep(.text-left-input) {
+  .el-input__inner {
+    text-align: left !important;
+  }
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.mobile-card {
+  /* ... */
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #f0f2f5;
+    padding-top: 12px;
+    margin-top: 12px;
   }
 }
 </style>
