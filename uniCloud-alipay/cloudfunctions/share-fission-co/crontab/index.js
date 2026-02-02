@@ -1,14 +1,13 @@
-const calcPointRatioDaily = require('./calcPointRatioDaily');
+const calcDailyStatistics = require('./calcDailyStatistics');
 
-const smsServerCrontabs = {
-  calcPointRatioDaily
+const serverCrontabs = {
+  calcDailyStatistics
 }
 
-module.exports = async function runCrontab(event) {
-  console.log('event------', event);
-  const name = event.triggerName || event.TriggerName || event.name;
-  if (smsServerCrontabs[name]) {
-    console.log('--trigger', name);
-    await smsServerCrontabs[name].bind(this)({});
+module.exports = async function runCrontab(event = {}) {
+  console.log('event: ', event);
+  for (name in serverCrontabs) {
+    console.log('triggerName: ', name);
+    await serverCrontabs[name].bind(this)({});
   }
 }

@@ -15,7 +15,4 @@ const clientInfo = { // 模拟clientInfo
 //   }
 // });
 
-crontab({
-  name: "calcPointRatioDaily",
-  a: 1
-})
+crontab()
