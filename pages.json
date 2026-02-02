@@ -189,11 +189,6 @@
         		"navigationBarTitleText": "广告观看记录"
         	}
       }, {
-        	"path": "ad-daily-revenue-record/list",
-        	"style": {
-        		"navigationBarTitleText": "每日广告收益记录"
-        	}
-      }, {
         	"path": "fund-pool-logs/list",
         	"style": {
         		"navigationBarTitleText": "资金池流水"

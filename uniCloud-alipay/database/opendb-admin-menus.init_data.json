@@ -47,18 +47,6 @@
     "_id": "sf-admin-finance"
   },
   {
-    "menu_id": "sf-admin-ad-daily-revenue-record",
-    "name": "每日广告收益",
-    "icon": "",
-    "url": "/pages/sf-admin/ad-daily-revenue-record/list",
-    "sort": 41,
-    "parent_id": "sf-admin-finance",
-    "permission": [],
-    "enable": true,
-    "create_date": 1602662469396,
-    "_id": "sf-admin-ad-daily-revenue-record"
-  },
-  {
     "menu_id": "sf-admin-fund-pool-logs-list",
     "name": "资金池流水",
     "icon": "",
