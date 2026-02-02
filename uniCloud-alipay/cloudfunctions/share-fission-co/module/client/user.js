@@ -7,7 +7,6 @@
  */
 const service = require('../../service');
 const { fail } = require('../../libs/response');
-const { Tables } = require('../../constants');
 
 module.exports = {
   /**
@@ -68,12 +67,7 @@ module.exports = {
    *
    * @param {Object} [data={}] - 查询参数对象
    * @param {string} [data.timeRange='all'] - 时间范围 today|yesterday|week|all
-   * @returns {Promise<Object>} 返回团队统计对象，包含以下字段：
-   *   - level1_count: 一级下线数量（总数）
-   *   - level2_count: 二级下线数量（总数）
-   *   - total_count: 团队总人数（一级+二级）
-   *   - total_income: 指定时间范围内的团队收益（积分），从积分记录中统计 source='invite' 的收益总和
-   *   - total_income_all: 全部时间的团队总收益（积分）
+   * @returns {Promise<Object>} 返回团队统计对象
    */
   async getTeamStats(data = {}) {
     try {
@@ -82,55 +76,7 @@ module.exports = {
         return fail(401001, { name: '用户认证' });
       }
 
-      const db = uniCloud.database();
-      const usersCollection = db.collection(Tables.users);
-      const scoresCollection = db.collection(Tables.scores);
-
-      // 统计一级下线数量（inviter_uid[0] 等于当前用户ID）
-      const level1Result = await usersCollection.where({
-        'inviter_uid.0': user_id
-      }).count();
-
-      // 统计二级下线数量（inviter_uid[1] 等于当前用户ID）
-      const level2Result = await usersCollection.where({
-        'inviter_uid.1': user_id
-      }).count();
-
-      // 基础积分查询条件（全部时间）
-      const baseWhere = {
-        user_id: user_id,
-        source: 'invite',
-        type: 1 // 收入类型
-      };
-
-      // 全部时间的总收益
-      const incomeAllResult = await scoresCollection.where(baseWhere).field({
-        score: true
-      }).get();
-
-      const total_income_all = incomeAllResult.data.reduce((sum, record) => {
-        return sum + (record.score || 0);
-      }, 0);
-
-      // 根据时间范围增加 create_date 过滤
-      const { timeRange = 'all' } = data;
-      // 暂时先返回全部数据，时间过滤功能后续添加
-      // TODO: 实现时间范围过滤
-      const incomeResult = await scoresCollection.where(baseWhere).field({
-        score: true
-      }).get();
-
-      const total_income = incomeResult.data.reduce((sum, record) => {
-        return sum + (record.score || 0);
-      }, 0);
-
-      return {
-        level1_count: level1Result.total || 0,
-        level2_count: level2Result.total || 0,
-        total_count: (level1Result.total || 0) + (level2Result.total || 0),
-        total_income,
-        total_income_all
-      };
+      return await service.user.getTeamStats(user_id, data);
     } catch (error) {
       console.error('getTeamStats error:', error);
       return fail(500001, { name: '服务器错误', message: error.message });

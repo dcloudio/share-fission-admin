@@ -435,6 +435,102 @@ class UserService extends BaseService {
       create_date: now
     });
   }
+
+  /**
+   * 获取团队统计信息
+   * @async
+   * @function getTeamStats
+   * @param {string} user_id - 用户ID
+   * @param {Object} [options={}] - 查询选项
+   * @param {string} [options.timeRange='all'] - 时间范围 today|yesterday|week|all
+   * @returns {Promise<Object>} 返回团队统计对象
+   */
+  async getTeamStats(user_id, options = {}) {
+    if (!user_id) {
+      throw new Error('用户ID不能为空');
+    }
+
+    const { timeRange = 'all' } = options;
+
+    // 统计一级下线数量
+    const level1Result = await this.collection.where({
+      'inviter_uid.0': user_id
+    }).count();
+
+    // 统计二级下线数量
+    const level2Result = await this.collection.where({
+      'inviter_uid.1': user_id
+    }).count();
+
+    // 计算时间范围
+    const timeFilter = this._getTimeFilter(timeRange);
+
+    // 基础积分查询条件
+    const baseWhere = {
+      user_id: user_id,
+      source: 'invite',
+      type: 1
+    };
+
+    // 全部时间的总收益
+    const incomeAllResult = await this.scoresCollection
+      .where(baseWhere)
+      .field({ score: true })
+      .get();
+
+    const total_income_all = incomeAllResult.data.reduce((sum, record) => {
+      return sum + (record.score || 0);
+    }, 0);
+
+    // 指定时间范围的收益
+    let total_income = total_income_all;
+    if (timeFilter) {
+      const timeWhere = { ...baseWhere, create_date: timeFilter };
+      const incomeResult = await this.scoresCollection
+        .where(timeWhere)
+        .field({ score: true })
+        .get();
+
+      total_income = incomeResult.data.reduce((sum, record) => {
+        return sum + (record.score || 0);
+      }, 0);
+    }
+
+    return {
+      level1_count: level1Result.total || 0,
+      level2_count: level2Result.total || 0,
+      total_count: (level1Result.total || 0) + (level2Result.total || 0),
+      total_income,
+      total_income_all
+    };
+  }
+
+  /**
+   * 获取时间过滤条件（内部方法）
+   * @private
+   * @param {string} timeRange - 时间范围
+   * @returns {Object|null} 数据库查询条件
+   */
+  _getTimeFilter(timeRange) {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+
+    switch (timeRange) {
+      case 'today':
+        return this._.gte(todayStart).and(this._.lte(todayEnd));
+      case 'yesterday':
+        const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+        const yesterdayEnd = todayStart - 1;
+        return this._.gte(yesterdayStart).and(this._.lte(yesterdayEnd));
+      case 'week':
+        const weekStart = todayStart - 6 * 24 * 60 * 60 * 1000;
+        return this._.gte(weekStart).and(this._.lte(todayEnd));
+      case 'all':
+      default:
+        return null;
+    }
+  }
 }
 
 module.exports = new UserService();
