@@ -1,5 +1,9 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
+    {
+    	"path": "pages/sf-admin/daily-statistics/list",
+      "navigationBarTitleText": "每日统计"
+    },
 		{
 			"path": "pages/index/index"
 		},
@@ -213,11 +217,6 @@
         	"path": "orders/list",
         	"style": {
         		"navigationBarTitleText": "订单管理"
-        	}
-      }, {
-        	"path": "daily-statistics/list",
-        	"style": {
-        		"navigationBarTitleText": "每日统计"
         	}
       }]
     },

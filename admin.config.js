@@ -41,61 +41,6 @@ export default {
   sideBar: { // 左侧菜单
     // 配置静态菜单列表（放置在用户被授权的菜单列表下边）
     staticMenu: [{
-      menu_id: "sf-admin",
-      text: '分销裂变',
-      icon: 'admin-icons-kaifashili',
-      url: "",
-      children: [
-        {
-          menu_id: "sf-admin-system",
-          text: '每日统计',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/daily-statistics/list'
-        },
-        {
-          menu_id: "sf-admin-user",
-          text: '分销用户管理',
-          icon: 'admin-icons-icon',
-          value: "/pages/sf-admin/user/list"
-        },
-        {
-          menu_id: "sf-admin-finance",
-          text: '财务管理',
-          icon: 'admin-icons-icon',
-          children: [
-            { menu_id: "sf-admin-ad-daily-revenue-record", text: '每日广告收益', value: '/pages/sf-admin/ad-daily-revenue-record/list' },
-            { menu_id: "sf-admin-fund-pool-logs-list", text: '资金池流水', value: '/pages/sf-admin/fund-pool-logs/list' },
-            { menu_id: "sf-admin-scores-list", text: '积分记录', value: '/pages/sf-admin/scores/list' },
-            { menu_id: "sf-admin-withdrawal-logs-list", text: '提现管理', value: '/pages/sf-admin/withdrawal-logs/list' },
-          ]
-        },
-        {
-          menu_id: "sf-admin-ad",
-          text: '广告管理',
-          icon: 'admin-icons-icon',
-          children: [
-            { menu_id: "sf-admin-ad-watch-logs", text: '广告观看记录', value: '/pages/sf-admin/ad-watch-logs/list' }
-          ]
-        },
-        {
-          menu_id: "sf-admin-shop",
-          text: '积分商城管理',
-          icon: 'admin-icons-icon',
-          children: [
-            { menu_id: "sf-admin-goods-list", text: '商品管理', value: '/pages/sf-admin/goods/list' },
-            { menu_id: "sf-admin-goods-categories-list", text: '商品分类', value: '/pages/sf-admin/goods-categories/list' },
-            { menu_id: "sf-admin-card-keys-list", text: '卡密管理', value: '/pages/sf-admin/card-keys/list' },
-            { menu_id: "sf-admin-orders-list", text: '订单管理', value: '/pages/sf-admin/orders/list' }
-          ]
-        },
-        {
-          menu_id: "sf-admin-system",
-          text: '分销系统设置',
-          icon: 'admin-icons-icon',
-          value: '/pages/sf-admin/config/form'
-        }
-      ]
-    }, {
       menu_id: "demo",
       text: '静态功能演示',
       icon: 'admin-icons-kaifashili',
@@ -110,27 +55,6 @@ export default {
         text: '表格',
         icon: 'admin-icons-table',
         value: '/pages/demo/table/table',
-      }]
-    }, {
-      menu_id: "admim-doc-pulgin",
-      text: '文档与插件',
-      icon: 'admin-icons-eco',
-      url: "",
-      children: [{
-        menu_id: "admin-doc",
-        icon: 'admin-icons-doc',
-        text: 'uni-admin 框架文档',
-        value: 'https://uniapp.dcloud.net.cn/uniCloud/admin'
-      }, {
-        menu_id: "stat-doc",
-        icon: 'admin-icons-help',
-        text: 'uni 统计教程',
-        value: 'https://uniapp.dcloud.net.cn/uni-stat-v2.html'
-      }, {
-        menu_id: "admin-pulgin",
-        icon: 'admin-icons-pulgin',
-        text: 'uni-admin 插件',
-        value: 'https://ext.dcloud.net.cn/?cat1=7&cat2=74'
       }]
     }]
   },
