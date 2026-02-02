@@ -270,10 +270,11 @@ class UserService extends BaseService {
    * 给指定用户增加或扣除积分
    * @async
    * @function addScore
-   * @description 给用户增加积分或扣除积分，同时记录积分变动日志
+   * @description 给用户增加积分或扣除积分，同时记录积分变动日志。
+   * 当 source='rewarded-video-ad' 时，会根据系统配置给上级和上上级发放奖励。
    * @param {string} user_id - 用户ID
    * @param {number} score - 增加的积分数量（可以为负数表示扣除）
-   * @param {string} source - 积分来源（如：'admin_add', 'admin_deduct', 'system_reward' 等）
+   * @param {string} source - 积分来源（如：'admin_add', 'admin_deduct', 'rewarded-video-ad' 等）
    * @param {string} [comment=''] - 备注说明
    * @returns {Promise<{new_balance: number}>} 返回更新后的积分余额
    * @throws {Error} 用户不存在
@@ -281,7 +282,7 @@ class UserService extends BaseService {
    * @example
    * // 给用户增加 100 积分
    * const result = await userService.addScore('xxx', 100, 'admin_add', '管理员手动增加积分');
-   * 
+   *
    * // 扣除用户 50 积分
    * const result = await userService.addScore('xxx', -50, 'admin_deduct', '违规扣除');
    */
@@ -303,33 +304,136 @@ class UserService extends BaseService {
       throw new Error('用户不存在');
     }
 
-    // 使用 updateAndReturn 更新用户积分并获取更新后的值
-    const { doc: updatedUser } = await this.collection.doc(user_id).updateAndReturn({
+    // 开启事务
+    const transaction = await this.db.startTransaction();
+
+    try {
+      const now = Date.now();
+
+      // 更新用户积分
+      const { data: currentUser } = await transaction.collection(this.tableName).doc(user_id).get();
+      const currentScore = currentUser.score || 0;
+      const new_balance = currentScore + score;
+
+      await transaction.collection(this.tableName).doc(user_id).update({
+        score: this._.inc(score)
+      });
+
+      // 添加积分变动记录
+      await transaction.collection(Tables.scores).add({
+        user_id,
+        score: score,
+        type: score > 0 ? 1 : 2, // 1=收入 2=支出
+        balance: new_balance,
+        source: source,
+        comment: comment || (score > 0 ? '增加积分' : '扣除积分'),
+        create_date: now
+      });
+
+      // 如果是看广告获得积分，给上级和上上级发放奖励
+      if (source === 'rewarded-video-ad' && score > 0) {
+        await this._rewardInvitersInTransaction(transaction, user, score, now);
+      }
+
+      // 提交事务
+      await transaction.commit();
+
+      return {
+        new_balance: new_balance,
+        score_change: score
+      };
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  /**
+   * 在事务中给上级发放奖励（内部方法）
+   * @async
+   * @function _rewardInvitersInTransaction
+   * @private
+   * @param {Object} transaction - 事务对象
+   * @param {Object} user - 当前用户对象
+   * @param {number} score - 用户获得的积分
+   * @param {number} now - 当前时间戳
+   */
+  async _rewardInvitersInTransaction(transaction, user, score, now) {
+    // 获取系统配置
+    const { data: config } = await transaction.collection(Tables.systemConfig).doc('main').get();
+    if (!config) {
+      return;
+    }
+
+    const { ad_score_l1_rate = 0, ad_score_l2_rate = 0 } = config;
+    const inviter_uid = user.inviter_uid || [];
+
+    // 给一级上级发放奖励
+    if (inviter_uid[0] && ad_score_l1_rate > 0) {
+      const l1Score = Math.floor(score * ad_score_l1_rate);
+      if (l1Score > 0) {
+        await this._addInviterScoreInTransaction(
+          transaction,
+          inviter_uid[0],
+          l1Score,
+          now,
+          `一级用户${user._id}看广告奖励`
+        );
+      }
+    }
+
+    // 给二级上级发放奖励
+    if (inviter_uid[1] && ad_score_l2_rate > 0) {
+      const l2Score = Math.floor(score * ad_score_l2_rate);
+      if (l2Score > 0) {
+        await this._addInviterScoreInTransaction(
+          transaction,
+          inviter_uid[1],
+          l2Score,
+          now,
+          `二级用户${user._id}看广告奖励`
+        );
+      }
+    }
+  }
+
+  /**
+   * 在事务中给邀请人增加积分（内部方法）
+   * @async
+   * @function _addInviterScoreInTransaction
+   * @private
+   * @param {Object} transaction - 事务对象
+   * @param {string} inviter_id - 邀请人用户ID
+   * @param {number} score - 奖励积分
+   * @param {number} now - 当前时间戳
+   * @param {string} comment - 备注
+   */
+  async _addInviterScoreInTransaction(transaction, inviter_id, score, now, comment) {
+    // 获取邀请人当前积分
+    const { data: inviter } = await transaction.collection(this.tableName).doc(inviter_id).get();
+    if (!inviter) {
+      return; // 邀请人不存在，跳过
+    }
+
+    const currentScore = inviter.score || 0;
+    const new_balance = currentScore + score;
+
+    // 更新邀请人积分
+    await transaction.collection(this.tableName).doc(inviter_id).update({
       score: this._.inc(score)
     });
 
-    if (!updatedUser) {
-      throw new Error('更新用户积分失败');
-    }
-
-    const new_balance = updatedUser.score || 0;
-    const now = Date.now();
-
     // 添加积分变动记录
-    await this.scoresCollection.add({
-      user_id,
+    await transaction.collection(Tables.scores).add({
+      user_id: inviter_id,
       score: score,
-      type: score > 0 ? 1 : 2, // 1=收入 2=支出
+      type: 1, // 1=收入
       balance: new_balance,
-      source: source,
-      comment: comment || (score > 0 ? '增加积分' : '扣除积分'),
+      source: 'invite',
+      comment: comment,
       create_date: now
     });
-
-    return {
-      new_balance: new_balance,
-      score_change: score
-    };
   }
 }
 
