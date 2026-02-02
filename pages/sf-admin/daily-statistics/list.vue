@@ -204,17 +204,17 @@
         <el-form-item label="广告收入" prop="ad_revenue">
           <el-input
             ref="revenueCashInputRef"
-            v-model="revenueFormData.ad_revenue" 
+            v-model="revenueFormData.ad_revenue"
             type="number"
             min="0"
             class="text-left-input"
-            style="width: 100%" 
+            style="width: 100%"
             placeholder="请输入广告收入金额"
           />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input 
-            v-model="revenueFormData.remark" 
+          <el-input
+            v-model="revenueFormData.remark"
             type="textarea"
             :rows="3"
             placeholder="请输入备注信息（可选）"
@@ -241,8 +241,8 @@
           <el-input v-model="remarkFormData.statement_date" disabled />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input 
-            v-model="remarkFormData.remark" 
+          <el-input
+            v-model="remarkFormData.remark"
             type="textarea"
             :rows="5"
             placeholder="请输入备注信息"
@@ -431,10 +431,10 @@ const updateChart = () => {
       bottom: 0
     },
     grid: {
-      left: 50,
-      right: 30,
+      left: 40,
+      right: 40,
       top: 30,
-      bottom: 50,
+      bottom: 30,
       containLabel: true
     },
     xAxis: {
