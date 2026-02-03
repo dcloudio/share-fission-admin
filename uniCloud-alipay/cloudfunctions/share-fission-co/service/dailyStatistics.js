@@ -70,12 +70,17 @@ class DailyStatisticsService extends BaseService {
    * });
    */
   async getList(data = {}) {
-    let { user_id, pageIndex = 1, pageSize = 20, startDate = '', endDate = '', sortField = '', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, startDate = '', endDate = '', sortField = '', sortOrder = 'desc', is_settled } = data;
 
     let where = {};
 
     if (user_id) {
       where.user_id = user_id;
+    }
+
+    // 结算状态筛选
+    if (is_settled !== undefined) {
+      where.is_settled = is_settled;
     }
 
     // 日期范围筛选（_id 就是日期）

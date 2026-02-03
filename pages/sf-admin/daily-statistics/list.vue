@@ -1,8 +1,8 @@
 <template>
   <view class="page-container">
+    <!-- 未结算提示 -->
     <!-- 页面头部 -->
     <page-header :title="pageConfig.title" :sub-title="pageConfig.subTitle" />
-
     <!-- 工具栏区域 -->
     <view class="toolbar">
       <view class="toolbar-left"></view>
@@ -41,7 +41,17 @@
         <el-empty v-if="!hasChartData" description="暂无图表数据" />
       </view>
     </view>
-
+    <el-alert
+      v-if="unsettledCount > 0"
+      type="warning"
+      show-icon
+      :closable="false"
+      class="unsettled-alert"
+    >
+      <template #title>
+        <span>重要：您有 <strong>{{ unsettledCount }}</strong> 条未结算记录，请及时填写广告收入完成结算</span>
+      </template>
+    </el-alert>
     <!-- 表格区域 -->
     <view class="table-container" ref="tableContainer">
       <div class="virtual-table-wrapper pc-only" v-loading="loading">
@@ -323,6 +333,9 @@ const tableRef = ref(null)
 const tableData = reactive({ list: [], total: 0 })
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
 
+// 未结算提示
+const unsettledCount = ref(0)
+
 // 排序相关
 const sortState = reactive({ field: '_id', order: 'desc' })
 
@@ -401,6 +414,19 @@ const loadData = async () => {
     ElMessage.error('加载数据失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 检查未结算数量
+const checkUnsettled = async () => {
+  try {
+    const res = await sfCo.action({
+      name: 'admin/dailyStatistics/getList',
+      data: { is_settled: false, pageSize: 1 }
+    })
+    unsettledCount.value = res.total || 0
+  } catch (e) {
+    // 忽略错误
   }
 }
 
@@ -609,6 +635,7 @@ const handleRemarkSubmit = async () => {
 // ========== 生命周期 ==========
 onLoad(() => {
   loadData()
+  checkUnsettled()
   setTimeout(calculateTableHeight, 300)
 })
 
@@ -633,6 +660,15 @@ page {
   flex-direction: column;
   padding: 10px;
   box-sizing: border-box;
+}
+
+.unsettled-alert {
+  margin-bottom: 16px;
+
+  strong {
+    color: #e6a23c;
+    font-size: 16px;
+  }
 }
 
 
