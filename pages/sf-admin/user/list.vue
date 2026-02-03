@@ -10,6 +10,15 @@
           <el-icon><Plus /></el-icon>
           新增
         </el-button>
+        <!-- 筛选标签 -->
+        <el-tag v-if="userFilter" closable @close="handleClearFilter" type="info" size="large">
+          <view class="parent-filter-tag">
+            <el-avatar :size="20" :src="userFilter.avatar">
+              <el-icon><User /></el-icon>
+            </el-avatar>
+            <span>{{ filterType === 'parent' ? '查看上级：' : '' }}{{ userFilter.nickname || userFilter.username }}{{ filterType === 'children' ? '的下级' : '' }}</span>
+          </view>
+        </el-tag>
       </view>
       <view class="toolbar-right">
         <el-input
@@ -79,6 +88,15 @@
                     <el-icon><User /></el-icon>
                   </el-avatar>
                 </template>
+                <template v-else-if="column.key === 'parent_info'">
+                  <view v-if="rowData.parent_info" class="parent-info-cell">
+                    <el-avatar :size="24" :src="rowData.parent_info.avatar">
+                      <el-icon><User /></el-icon>
+                    </el-avatar>
+                    <span class="parent-name">{{ rowData.parent_info.nickname || rowData.parent_info.username || '-' }}</span>
+                  </view>
+                  <span v-else>-</span>
+                </template>
                 <template v-else-if="column.key === 'status'">
                   <el-tag :type="getStatusType(rowData.status)" size="small" :disable-transitions="true">
                     {{ getStatusText(rowData.status) }}
@@ -95,6 +113,8 @@
                 </template>
                 <template v-else-if="column.key === 'actions'">
                   <view class="row-actions">
+                    <el-button type="primary" size="small" link @click="handleViewParent(rowData)" :disabled="!rowData.parent_info">上级</el-button>
+                    <el-button type="primary" size="small" link @click="handleViewChildren(rowData)">下级</el-button>
                     <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
                     <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
                   </view>
@@ -129,6 +149,16 @@
                 <text class="value">{{ item.username || '-' }}</text>
               </view>
               <view class="info-row">
+                <text class="label">上级</text>
+                <view v-if="item.parent_info" class="value parent-info-cell">
+                  <el-avatar :size="20" :src="item.parent_info.avatar">
+                    <el-icon><User /></el-icon>
+                  </el-avatar>
+                  <span>{{ item.parent_info.nickname || item.parent_info.username || '-' }}</span>
+                </view>
+                <text v-else class="value">-</text>
+              </view>
+              <view class="info-row">
                 <text class="label">手机号</text>
                 <text class="value">{{ item.mobile || '-' }}</text>
               </view>
@@ -155,6 +185,12 @@
             </view>
 
             <view class="card-footer">
+              <el-button type="primary" link size="small" @click="handleViewParent(item)" :disabled="!item.parent_info">
+                上级
+              </el-button>
+              <el-button type="primary" link size="small" @click="handleViewChildren(item)">
+                下级
+              </el-button>
               <el-button type="primary" link size="small" @click="handleEdit(item)">
                 <el-icon><Edit /></el-icon> 编辑
               </el-button>
@@ -272,6 +308,10 @@ const tableData = reactive({ list: [], total: 0 })
 const selectedRows = ref([])
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
 
+// 用户筛选相关
+const userFilter = ref(null) // { _id, nickname, avatar, username }
+const filterType = ref('') // 'parent' 查看上级 | 'children' 查看下级
+
 // 排序相关
 const sortState = reactive({ field: '', order: '' }) // order: 'asc' | 'desc' | ''
 
@@ -304,7 +344,7 @@ const computedColumns = computed(() => [
   { key: 'selection', title: '', width: 50, align: 'center' },
   { key: 'index', title: '序号', width: 70, align: 'center' },
   ...tableColumns.value,
-  { key: 'actions', title: '操作', width: 140, align: 'center', fixed: 'right' }
+  { key: 'actions', title: '操作', width: 220, align: 'center', fixed: 'right' }
 ])
 
 const isAllSelected = computed(() => {
@@ -341,6 +381,14 @@ const loadData = async () => {
     if (sortState.field && sortState.order) {
       data.sortField = sortState.field
       data.sortOrder = sortState.order
+    }
+    // 添加筛选参数
+    if (userFilter.value) {
+      if (filterType.value === 'children') {
+        data.parent_id = userFilter.value._id
+      } else if (filterType.value === 'parent') {
+        data.user_id = userFilter.value._id
+      }
     }
     const res = await sfCo.action({
       name: 'admin/user/getList',
@@ -387,7 +435,42 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchVal.value = ''
+  userFilter.value = null
+  filterType.value = ''
   handleSearch()
+}
+
+// 查看上级
+const handleViewParent = (row) => {
+  if (row.parent_info) {
+    userFilter.value = row.parent_info
+    filterType.value = 'parent'
+    pagination.currentPage = 1
+    selectedRows.value = []
+    loadData()
+  }
+}
+
+// 查看下级
+const handleViewChildren = (row) => {
+  userFilter.value = {
+    _id: row._id,
+    nickname: row.nickname,
+    avatar: row.avatar,
+    username: row.username
+  }
+  filterType.value = 'children'
+  pagination.currentPage = 1
+  selectedRows.value = []
+  loadData()
+}
+
+// 清除筛选
+const handleClearFilter = () => {
+  userFilter.value = null
+  filterType.value = ''
+  pagination.currentPage = 1
+  loadData()
 }
 
 // 选择
@@ -592,6 +675,24 @@ page {
   &:hover {
     opacity: 1;
   }
+}
+
+.parent-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .parent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.parent-filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .sortable-header {

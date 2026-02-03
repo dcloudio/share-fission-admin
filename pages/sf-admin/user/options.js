@@ -2,6 +2,7 @@ export const columns = [
   { key: 'avatar', dataKey: 'avatar', title: '头像', width: 80, align: 'center' },
   { key: 'username', dataKey: 'username', title: '用户名', width: 140 },
   { key: 'nickname', dataKey: 'nickname', title: '昵称', width: 120 },
+  { key: 'parent_info', dataKey: 'parent_info', title: '上级', width: 150 },
   { key: 'mobile', dataKey: 'mobile', title: '手机号', width: 140 },
   { key: 'email', dataKey: 'email', title: '邮箱', width: 140 },
   { key: 'score', dataKey: 'score', title: '积分余额', width: 110, align: 'right', sortable: true },

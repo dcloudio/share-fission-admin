@@ -81,29 +81,39 @@ class UserService extends BaseService {
    * });
    */
   async getList(data = {}) {
-    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
+    let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc', parent_id } = data;
 
     let where = {};
 
+    // 查询指定上级的下级用户
+    if (parent_id) {
+      where['inviter_uid.0'] = parent_id;
+    }
+
     if (user_id) {
-      where.user_id = user_id;
+      where._id = user_id;
     }
 
     // 关键词搜索
     if (keyword) {
-      if (libs.common.isObjectId(keyword)) {
-        where = this._.or([
-          { _id: keyword },
-          { username: keyword },
-          { nickname: keyword },
-          { mobile: keyword }
-        ]);
+      const keywordCondition = libs.common.isObjectId(keyword)
+        ? this._.or([
+            { _id: keyword },
+            { username: keyword },
+            { nickname: keyword },
+            { mobile: keyword }
+          ])
+        : this._.or([
+            { username: new RegExp(keyword, 'i') },
+            { nickname: new RegExp(keyword, 'i') },
+            { mobile: new RegExp(keyword, 'i') }
+          ]);
+
+      // 如果已有其他条件，用 and 组合
+      if (Object.keys(where).length > 0) {
+        where = this._.and([where, keywordCondition]);
       } else {
-        where = this._.or([
-          { username: new RegExp(keyword, 'i') },
-          { nickname: new RegExp(keyword, 'i') },
-          { mobile: new RegExp(keyword, 'i') }
-        ]);
+        where = keywordCondition;
       }
     }
 
@@ -119,22 +129,42 @@ class UserService extends BaseService {
     if (sortField && sortOrder) {
       query = query.orderBy(sortField, sortOrder);
     } else {
-      // 默认按注册时间倒序
       query = query.orderBy('register_date', 'desc');
     }
-
-    if (sortField !== "_id") {
-      query = query.orderBy("_id", sortOrder);
+    if (sortField !== '_id') {
+      query = query.orderBy('_id', sortOrder || 'desc');
     }
 
-    // 并行执行查询列表和查询总数
+    // 并行执行查询
     const [listResult, totalResult] = await Promise.all([
       query.skip(skip).limit(pageSize).get(),
       this.collection.where(where).count()
     ]);
 
+    const list = listResult.data;
+
+    // 批量查询上级用户信息
+    const parentIds = [...new Set(list.map(u => u.inviter_uid?.[0]).filter(Boolean))];
+    let parentMap = {};
+    if (parentIds.length > 0) {
+      const { data: parents } = await this.collection
+        .where({ _id: this._.in(parentIds) })
+        .field({ _id: true, nickname: true, avatar: true, username: true })
+        .get();
+      parentMap = parents.reduce((map, p) => {
+        map[p._id] = p;
+        return map;
+      }, {});
+    }
+
+    // 附加上级信息
+    list.forEach(user => {
+      const parentId = user.inviter_uid?.[0];
+      user.parent_info = parentId ? (parentMap[parentId] || null) : null;
+    });
+
     return {
-      list: listResult.data,
+      list,
       total: totalResult.total
     };
   }
