@@ -595,6 +595,7 @@ const handleRevenueSubmit = async () => {
     ElMessage.success('填写成功')
     revenueDialogVisible.value = false
     loadData()
+    checkUnsettled()
   } catch (e) {
     ElMessage.error(e.message || '操作失败')
   } finally {
