@@ -81,5 +81,49 @@ module.exports = {
       console.error('getTeamStats error:', error);
       return fail(500001, { name: '服务器错误', message: error.message });
     }
+  },
+
+  /**
+   * 获取团队成员列表
+   * @async
+   * @function getTeamMembers
+   * @description 获取当前用户的团队成员列表，支持分页和时间筛选。
+   *
+   * @param {Object} [data={}] - 查询参数对象
+   * @param {number} [data.level=1] - 层级 1=一级下线 2=二级下线
+   * @param {string} [data.timeRange='all'] - 时间范围 today|yesterday|week|all
+   * @param {number} [data.limit=20] - 每页条数
+   * @param {number} [data.offset=0] - 偏移量
+   * @param {boolean} [data.needTotal=false] - 是否需要总数
+   * @returns {Promise<Object>} 返回团队成员列表
+   */
+  async getTeamMembers(data = {}) {
+    try {
+      const user_id = this.getUserId();
+      if (!user_id) {
+        return fail(401001, { name: '用户认证' });
+      }
+
+      const result = await service.user.getTeamMembers(user_id, data);
+
+      // 格式化返回数据，添加邀请时间字段
+      const list = result.list.map(member => ({
+        uid: member._id,
+        username: member.username,
+        nickname: member.nickname,
+        avatar: member.avatar,
+        avatarFile: member.avatar_file,
+        inviteTime: member.register_date,
+        inviter_uid: member.inviter_uid
+      }));
+
+      return {
+        invitedUser: list,
+        total: result.total
+      };
+    } catch (error) {
+      console.error('getTeamMembers error:', error);
+      return fail(500001, { name: '服务器错误', message: error.message });
+    }
   }
 }

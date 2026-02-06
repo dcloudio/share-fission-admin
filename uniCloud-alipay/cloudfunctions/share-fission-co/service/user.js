@@ -482,18 +482,26 @@ class UserService extends BaseService {
 
     const { timeRange = 'all' } = options;
 
-    // 统计一级下线数量
-    const level1Result = await this.collection.where({
-      'inviter_uid.0': user_id
-    }).count();
-
-    // 统计二级下线数量
-    const level2Result = await this.collection.where({
-      'inviter_uid.1': user_id
-    }).count();
-
     // 计算时间范围
     const timeFilter = this._getTimeFilter(timeRange);
+
+    // 一级下线查询条件
+    const level1Where = { 'inviter_uid.0': user_id };
+    if (timeFilter) {
+      level1Where.register_date = timeFilter;
+    }
+
+    // 二级下线查询条件
+    const level2Where = { 'inviter_uid.1': user_id };
+    if (timeFilter) {
+      level2Where.register_date = timeFilter;
+    }
+
+    // 统计一级下线数量
+    const level1Result = await this.collection.where(level1Where).count();
+
+    // 统计二级下线数量
+    const level2Result = await this.collection.where(level2Where).count();
 
     // 基础积分查询条件
     const baseWhere = {
@@ -536,15 +544,103 @@ class UserService extends BaseService {
   }
 
   /**
+   * 获取团队成员列表
+   * @async
+   * @function getTeamMembers
+   * @param {string} user_id - 用户ID
+   * @param {Object} [options={}] - 查询选项
+   * @param {number} [options.level=1] - 层级 1=一级下线 2=二级下线
+   * @param {string} [options.timeRange='all'] - 时间范围 today|yesterday|week|all
+   * @param {number} [options.limit=20] - 每页条数
+   * @param {number} [options.offset=0] - 偏移量
+   * @param {boolean} [options.needTotal=false] - 是否需要总数
+   * @returns {Promise<Object>} 返回团队成员列表
+   */
+  async getTeamMembers(user_id, options = {}) {
+    if (!user_id) {
+      throw new Error('用户ID不能为空');
+    }
+
+    const {
+      level = 1,
+      timeRange = 'all',
+      limit = 20,
+      offset = 0,
+      needTotal = false
+    } = options;
+
+    // 计算时间范围
+    const timeFilter = this._getTimeFilter(timeRange);
+
+    // 构建查询条件
+    const where = {};
+
+    // 根据层级设置查询条件
+    if (level === 1) {
+      where['inviter_uid.0'] = user_id;
+    } else if (level === 2) {
+      where['inviter_uid.1'] = user_id;
+    } else {
+      throw new Error('层级参数错误，只支持 1 或 2');
+    }
+
+    // 添加时间过滤
+    if (timeFilter) {
+      where.register_date = timeFilter;
+    }
+
+    // 构建查询
+    let query = this.collection
+      .where(where)
+      .field({
+        _id: true,
+        username: true,
+        nickname: true,
+        avatar: true,
+        avatar_file: true,
+        register_date: true,
+        inviter_uid: true
+      })
+      .orderBy('register_date', 'desc')
+      .skip(offset)
+      .limit(limit);
+
+    // 执行查询
+    const promises = [query.get()];
+
+    // 如果需要总数，添加 count 查询
+    if (needTotal) {
+      promises.push(this.collection.where(where).count());
+    }
+
+    const results = await Promise.all(promises);
+    const listResult = results[0];
+    const totalResult = results[1];
+
+    return {
+      list: listResult.data || [],
+      total: needTotal ? (totalResult?.total || 0) : undefined
+    };
+  }
+
+  /**
    * 获取时间过滤条件（内部方法）
    * @private
    * @param {string} timeRange - 时间范围
    * @returns {Object|null} 数据库查询条件
    */
   _getTimeFilter(timeRange) {
+    // 获取当前北京时间的日期部分
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+    const beijingOffset = 8 * 60 * 60 * 1000; // UTC+8
+    const beijingNow = new Date(now.getTime() + beijingOffset);
+    const year = beijingNow.getUTCFullYear();
+    const month = String(beijingNow.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(beijingNow.getUTCDate()).padStart(2, '0');
+
+    // 使用带时区的 ISO 格式确保正确的北京时间
+    const todayStart = new Date(`${year}-${month}-${day}T00:00:00+08:00`).getTime();
+    const todayEnd = new Date(`${year}-${month}-${day}T23:59:59.999+08:00`).getTime();
 
     switch (timeRange) {
       case 'today':
