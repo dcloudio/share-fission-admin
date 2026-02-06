@@ -10,6 +10,8 @@
           <el-icon><Plus /></el-icon>
           新增
         </el-button>
+        <el-button @click="expandAll">展开全部</el-button>
+        <el-button @click="collapseAll">折叠全部</el-button>
       </view>
       <view class="toolbar-right">
         <el-select v-model="filterParentId" placeholder="选择父分类" clearable style="width: 160px" @change="handleSearch">
@@ -77,12 +79,16 @@
                   />
                 </template>
                 <template v-else-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  {{ rowIndex + 1 }}
                 </template>
                 <template v-else-if="column.key === 'name'">
-                  <span :style="{ paddingLeft: (rowData.level - 1) * 16 + 'px' }">
-                    {{ rowData.name }}
-                  </span>
+                  <view class="tree-cell" :style="{ paddingLeft: (rowData.level - 1) * 20 + 'px' }">
+                    <span class="expand-icon" @click.stop="toggleExpand(rowData)" v-if="rowData.hasChildren">
+                      <el-icon><ArrowRight v-if="!rowData.isExpanded" /><ArrowDown v-else /></el-icon>
+                    </span>
+                    <span class="expand-placeholder" v-else></span>
+                    <span>{{ rowData.name }}</span>
+                  </view>
                 </template>
                 <template v-else-if="column.key === 'parent_name'">
                   <span>{{ rowData.parent_name || '-' }}</span>
@@ -122,7 +128,7 @@
                 <text class="card-title">{{ item.name }}</text>
                 <el-tag size="small" :type="getLevelType(item.level)">{{ item.level }}级</el-tag>
               </view>
-              <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
+              <text class="card-index">#{{ index + 1 }}</text>
             </view>
 
             <view class="card-body">
@@ -171,16 +177,7 @@
         </template>
       </view>
       <view class="footer-right">
-        <el-pagination
-          v-model:current-page="pagination.currentPage"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="tableData.total"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
+        <span class="total-info">共 {{ tableData.total }} 条</span>
       </view>
     </view>
 
@@ -223,7 +220,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, CaretTop, CaretBottom, CaretRight, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -247,13 +244,107 @@ const formRef = ref(null)
 
 const tableData = reactive({ list: [], total: 0 })
 const selectedRows = ref([])
-const pagination = reactive({ currentPage: 1, pageSize: 20 })
+
+// 树形结构相关
+const allData = ref([]) // 原始数据
+const expandedKeys = ref(new Set()) // 展开的节点
 
 // 父分类列表（用于筛选）
 const parentCategories = ref([])
 
 // 排序相关
 const sortState = reactive({ field: 'sort', order: 'asc' })
+
+// ========== 树形结构方法 ==========
+// 构建树形结构
+const buildTree = (list, parentId = '') => {
+  const tree = []
+  for (const item of list) {
+    const itemParentId = item.parent_id || ''
+    if (itemParentId === parentId) {
+      const children = buildTree(list, item._id)
+      tree.push({
+        ...item,
+        children,
+        hasChildren: children.length > 0
+      })
+    }
+  }
+  // 按 sort 排序
+  tree.sort((a, b) => (a.sort || 0) - (b.sort || 0))
+  return tree
+}
+
+// 将树形结构扁平化为列表（用于表格显示）
+const flattenTree = (tree, result = [], level = 1) => {
+  for (const node of tree) {
+    const isExpanded = expandedKeys.value.has(node._id)
+    result.push({
+      ...node,
+      level,
+      isExpanded,
+      hasChildren: node.children && node.children.length > 0
+    })
+    if (isExpanded && node.children && node.children.length > 0) {
+      flattenTree(node.children, result, level + 1)
+    }
+  }
+  return result
+}
+
+// 切换展开/折叠
+const toggleExpand = (row) => {
+  if (expandedKeys.value.has(row._id)) {
+    expandedKeys.value.delete(row._id)
+  } else {
+    expandedKeys.value.add(row._id)
+  }
+  updateDisplayList()
+}
+
+// 展开所有
+const expandAll = () => {
+  allData.value.forEach(item => {
+    if (item.children && item.children.length > 0) {
+      expandedKeys.value.add(item._id)
+    }
+  })
+  // 递归添加所有有子节点的项
+  const addAllExpandable = (list) => {
+    list.forEach(item => {
+      if (item.hasChildren) {
+        expandedKeys.value.add(item._id)
+      }
+    })
+  }
+  const tree = buildTree(allData.value)
+  const flatList = []
+  const collectAll = (nodes) => {
+    nodes.forEach(node => {
+      if (node.hasChildren) {
+        expandedKeys.value.add(node._id)
+      }
+      if (node.children) {
+        collectAll(node.children)
+      }
+    })
+  }
+  collectAll(tree)
+  updateDisplayList()
+}
+
+// 折叠所有
+const collapseAll = () => {
+  expandedKeys.value.clear()
+  updateDisplayList()
+}
+
+// 更新显示列表
+const updateDisplayList = () => {
+  const tree = buildTree(allData.value)
+  tableData.list = flattenTree(tree)
+  tableData.total = tableData.list.length
+}
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -325,22 +416,23 @@ const loadData = async () => {
   loading.value = true
   try {
     const data = {
-      pageIndex: pagination.currentPage,
-      pageSize: pagination.pageSize,
+      pageIndex: 1,
+      pageSize: 10000, // 加载所有数据用于树形展示
       keyword: searchVal.value.trim(),
       parent_id: filterParentId.value
-    }
-    // 添加排序参数
-    if (sortState.field && sortState.order) {
-      data.sortField = sortState.field
-      data.sortOrder = sortState.order
     }
     const res = await sfCo.action({
       name: 'admin/goodsCategories/getList',
       data
     })
-    tableData.list = res.list || []
-    tableData.total = res.total || 0
+    allData.value = res.list || []
+    // 默认展开第一级
+    allData.value.forEach(item => {
+      if (!item.parent_id) {
+        expandedKeys.value.add(item._id)
+      }
+    })
+    updateDisplayList()
   } catch (e) {
     ElMessage.error('加载数据失败')
   } finally {
@@ -370,7 +462,6 @@ const getRowClass = ({ rowIndex }) => (rowIndex % 2 === 0 ? 'row-even' : 'row-od
 
 // 搜索
 const handleSearch = () => {
-  pagination.currentPage = 1
   selectedRows.value = []
   loadData()
 }
@@ -401,37 +492,6 @@ const handleSelectAll = (selected) => {
     const ids = tableData.list.map(r => r._id)
     selectedRows.value = selectedRows.value.filter(r => !ids.includes(r._id))
   }
-}
-
-// 分页
-const handleSizeChange = (size) => {
-  pagination.pageSize = size
-  pagination.currentPage = 1
-  loadData()
-}
-
-const handlePageChange = (page) => {
-  pagination.currentPage = page
-  loadData()
-}
-
-// 排序
-const handleSort = (field) => {
-  if (sortState.field === field) {
-    if (sortState.order === 'asc') {
-      sortState.order = 'desc'
-    } else if (sortState.order === 'desc') {
-      sortState.field = ''
-      sortState.order = ''
-    } else {
-      sortState.order = 'asc'
-    }
-  } else {
-    sortState.field = field
-    sortState.order = 'asc'
-  }
-  pagination.currentPage = 1
-  loadData()
 }
 
 // 新增
@@ -618,6 +678,38 @@ page {
   &:hover {
     opacity: 1;
   }
+}
+
+.tree-cell {
+  display: flex;
+  align-items: center;
+
+  .expand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin-right: 4px;
+    color: #909399;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #409eff;
+    }
+  }
+
+  .expand-placeholder {
+    display: inline-block;
+    width: 18px;
+    margin-right: 4px;
+  }
+}
+
+.total-info {
+  color: #909399;
+  font-size: 14px;
 }
 
 .sortable-header {
