@@ -190,6 +190,11 @@ class OrdersService extends BaseService {
         used_time: now
       });
 
+      // 更新商品销量
+      await transaction.collection(Tables.goods).doc(goods_id).update({
+        sales_count: this._.inc(1)
+      });
+
       await transaction.commit();
 
       return {
@@ -428,6 +433,14 @@ class OrdersService extends BaseService {
           status: 0, // 未发放
           order_id: this._.remove(),
           used_time: this._.remove()
+        });
+      }
+
+      // 5. 减少商品销量
+      const goods_id = order.goods_info?.goods_id;
+      if (goods_id) {
+        await transaction.collection(Tables.goods).doc(goods_id).update({
+          sales_count: this._.inc(-1)
         });
       }
 
