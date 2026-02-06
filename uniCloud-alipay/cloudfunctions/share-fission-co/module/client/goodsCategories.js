@@ -18,7 +18,7 @@ module.exports = {
   async _before() {
     const methodName = this.getMethodName();
     // 定义不需要登录的函数名（商品分类为公共数据，所有查询都不需要登录）
-    const noAuthFunctionNames = ["getList", "getById", "getParentList"];
+    const noAuthFunctionNames = ["getList", "getById", "getParentList", "getTree"];
     const requireAuth = !noAuthFunctionNames.includes(methodName);
     await this.middleware.auth(requireAuth);
   },
@@ -145,5 +145,30 @@ module.exports = {
   async getParentList(data = {}) {
     // 客户端只能查询启用状态的一级分类
     return await service.goodsCategories.getParentList(data);
+  },
+
+  /**
+   * 获取树形结构分类列表
+   * @async
+   * @function getTree
+   * @description 获取所有启用状态的分类，并组织成树形结构返回。
+   *
+   * **重要说明：**
+   * - 客户端接口强制只返回启用状态（status=1）的分类
+   * - 无需登录验证，可直接调用
+   *
+   * @param {Object} [data={}] - 查询参数对象（当前版本暂未使用）
+   * @returns {Promise<{tree: Array}>} 返回树形结构的分类列表
+   * @example
+   * const result = await goodsCategories.getTree();
+   * console.log(result.tree);
+   * // [
+   * //   { _id: '1', name: '一级分类', children: [
+   * //     { _id: '1-1', name: '二级分类' }
+   * //   ]}
+   * // ]
+   */
+  async getTree(data = {}) {
+    return await service.goodsCategories.getTree({ status: 1 });
   }
 }

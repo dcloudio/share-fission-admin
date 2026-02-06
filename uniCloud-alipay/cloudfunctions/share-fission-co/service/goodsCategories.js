@@ -163,6 +163,48 @@ class GoodsCategoriesService extends BaseService {
   }
 
   /**
+   * 获取树形结构分类列表
+   * @async
+   * @function getTree
+   * @description 获取所有启用状态的分类，并组织成树形结构返回
+   * @param {Object} [data={}] - 查询参数
+   * @param {number} [data.status=1] - 状态筛选，默认只返回启用的分类
+   * @returns {Promise<{tree: Array}>} 返回树形结构的分类列表
+   */
+  async getTree(data = {}) {
+    const { status = 1 } = data;
+
+    const where = {};
+    if (status !== undefined && status !== null && status !== '') {
+      where.status = status;
+    }
+
+    const { data: list } = await this.collection
+      .where(where)
+      .orderBy('sort', 'asc')
+      .get();
+
+    // 构建树形结构
+    const buildTree = (items, parentId = '') => {
+      const tree = [];
+      for (const item of items) {
+        const itemParentId = item.parent_id || '';
+        if (itemParentId === parentId) {
+          const children = buildTree(items, item._id);
+          tree.push({
+            ...item,
+            children: children.length > 0 ? children : undefined
+          });
+        }
+      }
+      return tree;
+    };
+
+    const tree = buildTree(list);
+    return { tree };
+  }
+
+  /**
    * 新增分类记录
    * @async
    * @function add

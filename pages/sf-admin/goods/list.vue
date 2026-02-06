@@ -12,9 +12,16 @@
         </el-button>
       </view>
       <view class="toolbar-right">
-        <el-select v-model="filterCategoryId" placeholder="分类筛选" clearable style="width: 120px" @change="handleSearch">
-          <el-option v-for="c in categoryOptions" :key="c.value" :label="c.label" :value="c.value" />
-        </el-select>
+        <el-tree-select
+          v-model="filterCategoryId"
+          :data="categoryTree"
+          :props="{ label: 'name', value: '_id', children: 'children' }"
+          placeholder="分类筛选"
+          clearable
+          check-strictly
+          style="width: 160px"
+          @change="handleSearch"
+        />
         <el-select v-model="filterStatus" placeholder="状态筛选" clearable style="width: 100px" @change="handleSearch">
           <el-option label="上架" :value="1" />
           <el-option label="下架" :value="0" />
@@ -219,9 +226,15 @@
           <el-input v-model="formData.name" placeholder="请输入商品名称" />
         </el-form-item>
         <el-form-item label="商品分类" prop="category_id">
-          <el-select v-model="formData.category_id" placeholder="请选择分类" style="width: 100%">
-            <el-option v-for="c in categoryOptions" :key="c.value" :label="c.label" :value="c.value" />
-          </el-select>
+          <el-tree-select
+            v-model="formData.category_id"
+            :data="categoryTree"
+            :props="{ label: 'name', value: '_id', children: 'children' }"
+            placeholder="请选择分类"
+            clearable
+            check-strictly
+            style="width: 100%"
+          />
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="8">
@@ -313,8 +326,8 @@ const tableData = reactive({ list: [], total: 0 })
 const selectedRows = ref([])
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
 
-// 分类选项（从数据库加载）
-const categoryOptions = ref([])
+// 分类树形数据
+const categoryTree = ref([])
 
 // 排序相关
 const sortState = reactive({ field: 'sort_order', order: 'desc' })
@@ -409,17 +422,14 @@ const loadData = async () => {
   }
 }
 
-// 加载分类选项
+// 加载分类树形数据
 const loadCategories = async () => {
   try {
     const res = await sfCo.action({
-      name: 'admin/goodsCategories/getParentList',
+      name: 'admin/goodsCategories/getTree',
       data: {}
     })
-    categoryOptions.value = (res.list || []).map(item => ({
-      label: item.name,
-      value: item._id
-    }))
+    categoryTree.value = res.tree || []
   } catch (e) {
     console.error('加载分类失败', e)
   }

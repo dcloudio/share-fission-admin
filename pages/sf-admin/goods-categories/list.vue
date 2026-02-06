@@ -107,7 +107,7 @@
                 </template>
                 <template v-else-if="column.key === 'actions'">
                   <view class="row-actions">
-                    <el-button type="primary" size="small" link @click="handleAddChild(rowData)">添加子分类</el-button>
+                    <el-button v-if="rowData.level === 1" type="primary" size="small" link @click="handleAddChild(rowData)">添加子分类</el-button>
                     <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
                     <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
                   </view>
@@ -152,7 +152,7 @@
             </view>
 
             <view class="card-footer">
-              <el-button type="primary" link size="small" @click="handleAddChild(item)">
+              <el-button v-if="item.level === 1" type="primary" link size="small" @click="handleAddChild(item)">
                 <el-icon><Plus /></el-icon> 子分类
               </el-button>
               <el-button type="primary" link size="small" @click="handleEdit(item)">

@@ -26,6 +26,10 @@ module.exports = {
   async getParentList(data = {}) {
     return await service.goodsCategories.getParentList(data);
   },
+  // 获取树形结构分类列表
+  async getTree(data = {}) {
+    return await service.goodsCategories.getTree(data);
+  },
   // 查详情
   async getById(data = {}) {
     const { _id } = data;

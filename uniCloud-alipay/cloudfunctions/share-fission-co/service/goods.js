@@ -65,6 +65,32 @@ class GoodsService extends BaseService {
   }
 
   /**
+   * 获取指定分类及其所有子分类的ID列表
+   * @private
+   * @param {string} categoryId - 分类ID
+   * @returns {Promise<string[]>} 分类ID数组
+   */
+  async _getCategoryWithChildren(categoryId) {
+    const allIds = [categoryId];
+
+    const findChildren = async (parentIds) => {
+      if (parentIds.length === 0) return;
+      const { data: children } = await this.categoryCollection
+        .where({ parent_id: this._.in(parentIds) })
+        .field({ _id: true })
+        .get();
+      const childIds = children.map(c => c._id);
+      if (childIds.length > 0) {
+        allIds.push(...childIds);
+        await findChildren(childIds);
+      }
+    };
+
+    await findChildren([categoryId]);
+    return allIds;
+  }
+
+  /**
    * 分页查询商品列表
    * @async
    * @function getList
@@ -90,16 +116,17 @@ class GoodsService extends BaseService {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', category_id, status, sortField = 'sort_order', sortOrder = 'desc' } = data;
 
     let where = {
-      is_deleted: this._.neq(true) // 排除软删除的记录
+      is_deleted: false // 排除软删除的记录
     };
 
     if (user_id) {
       where.user_id = user_id;
     }
 
-    // 分类筛选
+    // 分类筛选（包含当前分类及所有子分类）
     if (category_id) {
-      where.category_id = category_id;
+      const categoryIds = await this._getCategoryWithChildren(category_id);
+      where.category_id = this._.in(categoryIds);
     }
 
     // 状态筛选
