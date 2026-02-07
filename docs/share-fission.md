@@ -369,12 +369,12 @@ const res = await shareFissionCo.action({
 
 ## 附录
 
-### 相关链接
+### 相关文档
 
-- [uni-app 文档](https://uniapp.dcloud.net.cn/)
-- [uni-admin 文档](https://doc.dcloud.net.cn/uniCloud/admin.html)
-- [uni-ad 文档](https://uniad.dcloud.net.cn/login)
-- [uniCloud 文档](https://doc.dcloud.net.cn/uniCloud/)
-- [uniCloud 发行](https://doc.dcloud.net.cn/uniCloud/publish.html)
+- [uni-app](https://uniapp.dcloud.net.cn/)
+- [uni-admin](https://doc.dcloud.net.cn/uniCloud/admin.html)
+- [uni-ad](https://uniad.dcloud.net.cn/login)
+- [uniCloud](https://doc.dcloud.net.cn/uniCloud/)
+- [uniCloud 发行注意事项](https://doc.dcloud.net.cn/uniCloud/publish.html)
 
 ---
