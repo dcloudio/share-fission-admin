@@ -5,7 +5,7 @@
     "url": "/",
     "sort": 10,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-system"
@@ -17,7 +17,7 @@
     "url": "/pages/sf-admin/user/list",
     "sort": 20,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-user"
@@ -29,7 +29,7 @@
     "url": "/pages/sf-admin/config/form",
     "sort": 30,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-config"
@@ -41,7 +41,7 @@
     "url": "",
     "sort": 40,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-finance"
@@ -53,7 +53,7 @@
     "url": "/pages/sf-admin/fund-pool-logs/list",
     "sort": 42,
     "parent_id": "sf-admin-finance",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-fund-pool-logs-list"
@@ -65,7 +65,7 @@
     "url": "/pages/sf-admin/scores/list",
     "sort": 43,
     "parent_id": "sf-admin-finance",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-scores-list"
@@ -77,7 +77,7 @@
     "url": "/pages/sf-admin/withdrawal-logs/list",
     "sort": 44,
     "parent_id": "sf-admin-finance",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-withdrawal-logs-list"
@@ -89,7 +89,7 @@
     "url": "",
     "sort": 50,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-ad"
@@ -101,7 +101,7 @@
     "url": "/pages/sf-admin/ad-watch-logs/list",
     "sort": 51,
     "parent_id": "sf-admin-ad",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-ad-watch-logs"
@@ -113,7 +113,7 @@
     "url": "",
     "sort": 60,
     "parent_id": "",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-shop"
@@ -125,7 +125,7 @@
     "url": "/pages/sf-admin/goods/list",
     "sort": 61,
     "parent_id": "sf-admin-shop",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-goods-list"
@@ -137,7 +137,7 @@
     "url": "/pages/sf-admin/goods-categories/list",
     "sort": 62,
     "parent_id": "sf-admin-shop",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-goods-categories-list"
@@ -149,7 +149,7 @@
     "url": "/pages/sf-admin/card-keys/list",
     "sort": 63,
     "parent_id": "sf-admin-shop",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-card-keys-list"
@@ -161,7 +161,7 @@
     "url": "/pages/sf-admin/orders/list",
     "sort": 64,
     "parent_id": "sf-admin-shop",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "sf-admin-orders-list"
@@ -173,7 +173,7 @@
     "url": "",
     "sort": 9000,
     "parent_id": "",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "uni-admin-builtin"
@@ -185,7 +185,7 @@
     "url": "/pages/uni-stat/index/index",
     "sort": 100,
     "parent_id": "uni-admin-builtin",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1602662469396,
     "_id": "index"
@@ -257,7 +257,7 @@
     "url": "/pages/system/app/list",
     "sort": 1035,
     "parent_id": "system_management",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662469399,
     "_id": "system_app"
@@ -269,7 +269,7 @@
     "url": "/uni_modules/uni-upgrade-center/pages/version/list",
     "sort": 1036,
     "parent_id": "system_management",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1656491532434,
     "_id": "system_update"
@@ -281,7 +281,7 @@
     "url": "/pages/system/tag/list",
     "sort": 1037,
     "parent_id": "system_management",
-    "permission": [],
+    "permission": ["base-admin"],
     "enable": true,
     "create_date": 1602662479389,
     "_id": "system_tag"
@@ -311,7 +311,7 @@
     "_id": "safety_statistics_user_log"
   },
   {
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat",
     "name": "uni 统计",
@@ -324,7 +324,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device",
     "name": "设备统计",
@@ -336,7 +336,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-overview",
     "name": "概况",
@@ -348,7 +348,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-activity",
     "name": "活跃度",
@@ -360,7 +360,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-trend",
     "name": "趋势分析",
@@ -372,7 +372,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-retention",
     "name": "留存",
@@ -384,7 +384,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-comparison",
     "name": "平台对比",
@@ -396,7 +396,7 @@
   },
   {
     "parent_id": "uni-stat-device",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-device-stickiness",
     "name": "粘性",
@@ -408,7 +408,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user",
     "name": "注册用户统计",
@@ -420,7 +420,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user-overview",
     "name": "概况",
@@ -432,7 +432,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user-activity",
     "name": "活跃度",
@@ -444,7 +444,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "icon": "",
     "menu_id": "uni-stat-user-trend",
@@ -456,7 +456,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user-retention",
     "name": "留存",
@@ -468,7 +468,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user-comparison",
     "name": "平台对比",
@@ -480,7 +480,7 @@
   },
   {
     "parent_id": "uni-stat-user",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-user-stickiness",
     "name": "粘性",
@@ -492,7 +492,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-analysis",
     "name": "页面统计",
@@ -504,7 +504,7 @@
   },
   {
     "parent_id": "uni-stat-page-analysis",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-res",
     "name": "受访页",
@@ -516,7 +516,7 @@
   },
   {
     "parent_id": "uni-stat-page-analysis",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-ent",
     "name": "入口页",
@@ -528,7 +528,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-content-analysis",
     "name": "内容统计",
@@ -540,7 +540,7 @@
   },
   {
     "parent_id": "uni-stat-page-content-analysis",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-content",
     "name": "内容统计",
@@ -552,7 +552,7 @@
   },
   {
     "parent_id": "uni-stat-page-content-analysis",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-page-rule",
     "name": "页面规则",
@@ -564,7 +564,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-senceChannel",
     "name": "渠道/场景值分析",
@@ -576,7 +576,7 @@
   },
   {
     "parent_id": "uni-stat-senceChannel",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-senceChannel-scene",
     "name": "场景值（小程序）",
@@ -588,7 +588,7 @@
   },
   {
     "parent_id": "uni-stat-senceChannel",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-senceChannel-channel",
     "name": "渠道（app）",
@@ -600,7 +600,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-event-event",
     "name": "自定义事件",
@@ -612,7 +612,7 @@
   },
   {
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-error",
     "name": "错误统计",
@@ -624,7 +624,7 @@
   },
   {
     "parent_id": "uni-stat-error",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-error-js",
     "name": "代码错误",
@@ -636,7 +636,7 @@
   },
   {
     "parent_id": "uni-stat-error",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "menu_id": "uni-stat-error-app",
     "name": "app崩溃",
@@ -653,7 +653,7 @@
     "url": "",
     "sort": 2122,
     "parent_id": "uni-stat",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1667386977981,
     "_id": "uni-stat-pay"
@@ -665,7 +665,7 @@
     "url": "/pages/uni-stat/pay-order/overview/overview",
     "sort": 21221,
     "parent_id": "uni-stat-pay",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1667387038602,
     "_id": "uni-stat-pay-overview"
@@ -677,7 +677,7 @@
     "url": "/pages/uni-stat/pay-order/funnel/funnel",
     "sort": 21222,
     "parent_id": "uni-stat-pay",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1668430092890,
     "_id": "uni-stat-pay-funnel"
@@ -689,7 +689,7 @@
     "url": "/pages/uni-stat/pay-order/ranking/ranking",
     "sort": 21223,
     "parent_id": "uni-stat-pay",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1668430128302,
     "_id": "uni-stat-pay-ranking"
@@ -701,7 +701,7 @@
     "url": "/pages/uni-stat/pay-order/list/list",
     "sort": 21224,
     "parent_id": "uni-stat-pay",
-    "permission": [],
+    "permission": ["uni-stat-admin"],
     "enable": true,
     "create_date": 1667387078947,
     "_id": "uni-stat-pay-order-list"
