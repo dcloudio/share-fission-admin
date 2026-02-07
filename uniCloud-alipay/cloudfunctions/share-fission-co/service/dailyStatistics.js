@@ -83,13 +83,13 @@ class DailyStatisticsService extends BaseService {
       where.is_settled = is_settled;
     }
 
-    // 日期范围筛选（_id 就是日期）
+    // 日期范围筛选（statement_date 就是日期）
     if (startDate && endDate) {
-      where._id = this._.gte(startDate).and(this._.lte(endDate));
+      where.statement_date = this._.gte(startDate).and(this._.lte(endDate));
     } else if (startDate) {
-      where._id = this._.gte(startDate);
+      where.statement_date = this._.gte(startDate);
     } else if (endDate) {
-      where._id = this._.lte(endDate);
+      where.statement_date = this._.lte(endDate);
     }
 
     const skip = (pageIndex - 1) * pageSize;
@@ -102,7 +102,7 @@ class DailyStatisticsService extends BaseService {
       query = query.orderBy(sortField, sortOrder);
     } else {
       // 默认按日期倒序（最新的在前）
-      query = query.orderBy('_id', 'desc');
+      query = query.orderBy('statement_date', 'desc');
     }
 
     // 并行执行
