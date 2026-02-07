@@ -28,7 +28,7 @@
 				url: config.error.url
 			})
 		},
-		onLaunch: function() {
+		onLaunch: function(e = {}) {
 			// #ifdef H5
 			console.log(
 				`%c uni-admin %c v${version} `,
@@ -38,12 +38,12 @@
 			// #endif
 			// #ifdef H5
 			// 此处为强制用户必须登录才能访问其他页面，如果需要部分页面不登录也能访问，需要在此过滤这些页面不执行下面的代码或直接注释掉此代码
-			// let uni_id_token_expired = uni.getStorageSync("uni_id_token_expired");
-			// if (!uni_id_token_expired || uni_id_token_expired < Date.now()) {
-			// 	uni.reLaunch({
-			// 		url: config.login.url
-			// 	})
-			// }
+			let uni_id_token_expired = uni.getStorageSync("uni_id_token_expired");
+			if (e.path.indexOf("login") === -1 && !uni_id_token_expired || uni_id_token_expired < Date.now()) {
+				uni.reLaunch({
+					url: config.login.url
+				})
+			}
 			// #endif
 			// 线上示例使用
 			// console.log('%c uni-app官方团队诚邀优秀前端工程师加盟，一起打造更卓越的uni-app & uniCloud，欢迎投递简历到 hr2013@dcloud.io', 'color: red');

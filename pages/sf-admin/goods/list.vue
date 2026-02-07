@@ -101,6 +101,9 @@
                 <template v-else-if="column.key === 'category_name'">
                   {{ rowData.category_name || '-' }}
                 </template>
+                <template v-else-if="column.key === 'sales_count'">
+                  {{ rowData.sales_count || 0 }}
+                </template>
                 <template v-else-if="column.key === 'score_cost'">
                   <span class="score-text">{{ formatInteger(rowData[column.key]) }}</span>
                 </template>

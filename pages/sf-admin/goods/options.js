@@ -7,6 +7,7 @@ export const columns = [
   { key: 'category_name', dataKey: 'category_name', title: '分类', width: 100 },
   { key: 'score_cost', dataKey: 'score_cost', title: '所需积分', width: 100, align: 'right', sortable: true },
   { key: 'stock', dataKey: 'stock', title: '库存', width: 80, align: 'right', sortable: true },
+  { key: 'sales_count', dataKey: 'sales_count', title: '销量', width: 80, align: 'center', sortable: true },
   { key: 'sort_order', dataKey: 'sort_order', title: '排序', width: 80, align: 'center', sortable: true },
   { key: 'status', dataKey: 'status', title: '状态', width: 80, align: 'center' },
   { key: 'create_time', dataKey: 'create_time', title: '创建时间', width: 170, sortable: true },

@@ -182,7 +182,7 @@
     "menu_id": "index",
     "name": "uni 统计首页",
     "icon": "uni-icons-home",
-    "url": "/pages/index/index",
+    "url": "/pages/uni-stat/index/index",
     "sort": 100,
     "parent_id": "uni-admin-builtin",
     "permission": [],

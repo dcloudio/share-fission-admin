@@ -1,11 +1,8 @@
 {
 	"pages": [
-    {
-    	"path": "pages/sf-admin/daily-statistics/list",
-      "navigationBarTitleText": "每日统计"
-    },
 		{
-			"path": "pages/index/index"
+			"path": "pages/index/index",
+      "navigationBarTitleText": "每日统计"
 		},
 		{
 			"path": "pages/demo/icons/icons",
@@ -345,7 +342,11 @@
 		},
 		{
 			"root": "pages/uni-stat",
-			"pages": [{
+			"pages": [
+        {
+        	"path": "index/index"
+        },
+        {
 					"path": "page-res/page-res",
 					"style": {
 						"navigationBarTitleText": "受访页",
