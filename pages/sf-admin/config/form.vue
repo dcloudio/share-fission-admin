@@ -40,6 +40,10 @@
               <el-form-item label="积分兑换比例" prop="ad_score_rate">
                 <el-input-number v-model="formData.ad_score_rate" :min="0" :step="10" class="input-width" />
                 <div class="form-tip">实时模式下，1元广告收益兑换的积分数量</div>
+                <div class="form-tip" style="color: #E6A23C; margin-top: 8px;">
+                  <el-icon style="vertical-align: middle;"><WarningFilled /></el-icon>
+                  使用实时模式需要确认您的应用已在 uni-ad 后台开通广告收益实时计价模式，否则依然会按照非实时模式处理
+                </div>
               </el-form-item>
             </el-col>
             <el-col :span="24" :xs="24">
