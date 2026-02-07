@@ -328,7 +328,6 @@ const res = await shareFissionCo.action({
 | 技能命令 | 功能说明 | 使用场景 |
 |---------|---------|---------|
 | `/crud-table` | 快速创建 CRUD 表格页面 | 创建带增删改查功能的管理页面 |
-| `/uniapp-pages-add` | 新增 uni-app 页面 | 创建新页面并自动配置路由 |
 | `/unicloud-database` | 数据库表操作 | 创建数据库表结构、索引和初始数据 |
 
 **使用示例**
@@ -346,17 +345,11 @@ const res = await shareFissionCo.action({
    - 注册页面路由（pages.json）
    - 添加菜单配置（admin.config.js，你最终需要把这个菜单配置手动添加到数据库）
 
-2. **创建新页面**
-   ```bash
-   /uniapp-pages-add
-   ```
-   自动完成页面创建和路由注册。
-
-3. **创建数据库表**
+2. **创建数据库表**
    ```bash
    /unicloud-database
    ```
-   自动生成表结构文件（schema.json、index.json、init_data.json）。
+   自动生成表结构文件（schema.json、index.json、init_data.json），且会智能设计字段名称
 
 **技能优势**
 
