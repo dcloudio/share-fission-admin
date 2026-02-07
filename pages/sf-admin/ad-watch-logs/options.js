@@ -3,7 +3,7 @@
  */
 export const columns = [
   { key: '_id', dataKey: '_id', title: 'ID', width: 220 },
-  { key: 'user_id', dataKey: 'user_id', title: '用户ID', width: 220 },
+  { key: 'user_info', dataKey: 'user_info', title: '用户', width: 220 },
   { key: 'ad_type', dataKey: 'ad_type', title: '广告类型', width: 120 },
   { key: 'ad_id', dataKey: 'ad_id', title: '广告ID', width: 180 },
   { key: 'score', dataKey: 'score', title: '获得积分', width: 100, align: 'right', sortable: true },

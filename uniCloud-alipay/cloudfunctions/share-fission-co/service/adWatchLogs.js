@@ -63,7 +63,8 @@ class AdWatchLogsService extends BaseService {
    * 分页查询广告观看记录列表
    * @async
    * @function getList
-   * @description 支持关键词搜索（ID、用户ID、广告ID、广告类型）、自定义排序和分页。
+   * @description 使用聚合管道查询广告观看记录列表，关联用户表获取昵称和头像。
+   * 支持关键词搜索（ID、用户ID、广告ID、广告类型）、自定义排序和分页。
    * 默认按创建时间倒序排列
    * @param {AdWatchLogQueryParams} [data={}] - 查询参数对象
    * @param {number} [data.pageIndex=1] - 页码，从1开始
@@ -82,55 +83,99 @@ class AdWatchLogsService extends BaseService {
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
 
-    let where = {};
+    let matchConditions = [];
 
+    // user_id 筛选
     if (user_id) {
-      where.user_id = user_id;
+      matchConditions.push({ user_id: user_id });
     }
 
     // 关键词搜索
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {
-        where = this._.or([
-          { _id: keyword },
-          { user_id: keyword },
-          { ad_id: keyword }
-        ]);
+        matchConditions.push({
+          $or: [
+            { _id: keyword },
+            { user_id: keyword },
+            { ad_id: keyword }
+          ]
+        });
       } else {
-        where = this._.or([
-          { user_id: new RegExp(keyword, 'i') },
-          { ad_id: new RegExp(keyword, 'i') },
-          { ad_type: new RegExp(keyword, 'i') }
-        ]);
+        matchConditions.push({
+          $or: [
+            { user_id: { $regex: keyword, $options: 'i' } },
+            { ad_id: { $regex: keyword, $options: 'i' } },
+            { ad_type: { $regex: keyword, $options: 'i' } }
+          ]
+        });
       }
     }
 
     const skip = (pageIndex - 1) * pageSize;
 
-    // 构建查询
-    let query = this.collection.where(where);
+    // 构建聚合管道
+    let pipeline = [];
 
-    // 处理排序
+    // 匹配条件
+    if (matchConditions.length > 0) {
+      pipeline.push({
+        $match: matchConditions.length === 1 ? matchConditions[0] : { $and: matchConditions }
+      });
+    }
+
+    // 关联用户表获取昵称和头像
+    pipeline.push({
+      $lookup: {
+        from: Tables.users,
+        localField: 'user_id',
+        foreignField: '_id',
+        as: 'user_info'
+      }
+    });
+
+    // 添加计算字段
+    pipeline.push({
+      $addFields: {
+        user_nickname: { $arrayElemAt: ['$user_info.nickname', 0] },
+        user_avatar: { $arrayElemAt: ['$user_info.avatar', 0] }
+      }
+    });
+
+    // 排序
+    let sortObj = {};
     if (sortField && sortOrder) {
-      query = query.orderBy(sortField, sortOrder);
+      sortObj[sortField] = sortOrder === 'asc' ? 1 : -1;
     } else {
-      // 默认按创建时间倒序
-      query = query.orderBy('create_time', 'desc');
+      sortObj['create_time'] = -1;
     }
-
-    if (sortField !== "_id") {
-      query = query.orderBy("_id", sortOrder || 'desc');
+    if (sortField !== '_id') {
+      sortObj['_id'] = sortOrder === 'asc' ? 1 : -1;
     }
+    pipeline.push({ $sort: sortObj });
 
-    // 并行执行
-    const [listResult, totalResult] = await Promise.all([
-      query.skip(skip).limit(pageSize).get(),
-      this.collection.where(where).count()
+    // 统计总数的管道
+    const countPipeline = [...pipeline, { $count: 'total' }];
+
+    // 分页
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: pageSize });
+
+    // 移除不需要的字段
+    pipeline.push({
+      $project: {
+        user_info: 0
+      }
+    });
+
+    // 执行查询
+    const [listResult, countResult] = await Promise.all([
+      this.collection.aggregate(pipeline).end(),
+      this.collection.aggregate(countPipeline).end()
     ]);
 
     return {
-      list: listResult.data,
-      total: totalResult.total
+      list: listResult.data || [],
+      total: countResult.data[0]?.total || 0
     };
   }
 }

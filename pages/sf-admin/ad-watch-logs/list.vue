@@ -56,6 +56,22 @@
                 <template v-if="column.key === 'index'">
                   {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
                 </template>
+                <template v-else-if="column.key === 'user_info'">
+                  <view class="user-info-cell">
+                    <el-avatar :size="32" :src="rowData.user_avatar" v-if="rowData.user_avatar">
+                      <template #default>
+                        <el-icon><User /></el-icon>
+                      </template>
+                    </el-avatar>
+                    <el-avatar :size="32" v-else>
+                      <el-icon><User /></el-icon>
+                    </el-avatar>
+                    <view class="user-text">
+                      <span class="user-nickname">{{ rowData.user_nickname || '未知用户' }}</span>
+                      <span class="user-id">{{ rowData.user_id }}</span>
+                    </view>
+                  </view>
+                </template>
                 <template v-else-if="column.key === 'is_realtime'">
                   <el-tag :type="rowData[column.key] ? 'success' : 'info'" size="small" :disable-transitions="true">
                     {{ rowData[column.key] ? '是' : '否' }}
@@ -90,9 +106,19 @@
             </view>
 
             <view class="card-body">
-              <view class="info-row">
-                <text class="label">用户ID</text>
-                <text class="value">{{ item.user_id || '-' }}</text>
+              <view class="info-row user-row">
+                <text class="label">用户</text>
+                <view class="user-info-mobile">
+                  <el-avatar :size="24" :src="item.user_avatar" v-if="item.user_avatar">
+                    <template #default>
+                      <el-icon><User /></el-icon>
+                    </template>
+                  </el-avatar>
+                  <el-avatar :size="24" v-else>
+                    <el-icon><User /></el-icon>
+                  </el-avatar>
+                  <text class="value">{{ item.user_nickname || '未知用户' }}</text>
+                </view>
               </view>
               <view class="info-row">
                 <text class="label">获得积分</text>
@@ -136,7 +162,7 @@
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ElTableV2, ElAutoResizer, ElMessage } from 'element-plus'
-import { Search, CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { Search, CaretTop, CaretBottom, User } from '@element-plus/icons-vue'
 import { columns } from './options.js'
 
 // 云对象
@@ -160,7 +186,7 @@ const tableData = reactive({ list: [], total: 0 })
 const pagination = reactive({ currentPage: 1, pageSize: 20 })
 
 // 排序相关
-const sortState = reactive({ field: '', order: '' }) // order: 'asc' | 'desc' | ''
+const sortState = reactive({ field: 'watch_time', order: 'desc' }) // order: 'asc' | 'desc' | ''
 
 // ========== 计算属性 ==========
 const tableColumns = ref([...columns])
@@ -357,6 +383,34 @@ page {
   }
 }
 
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+
+  .user-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    .user-nickname {
+      font-size: 14px;
+      font-weight: 500;
+      color: #303133;
+    }
+
+    .user-id {
+      font-size: 12px;
+      color: #909399;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
 .score-text {
   color: #409eff;
   font-weight: 500;
@@ -479,6 +533,10 @@ page {
           font-size: 14px;
           margin-bottom: 8px;
 
+          &.user-row {
+            align-items: center;
+          }
+
           .label {
             color: #909399;
           }
@@ -492,6 +550,12 @@ page {
               color: #409eff;
               font-weight: 500;
             }
+          }
+
+          .user-info-mobile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
           }
         }
       }
