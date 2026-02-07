@@ -11,9 +11,9 @@ export const columns = [
   { key: 'active_users', dataKey: 'active_users', title: '活跃用户', width: 100, align: 'center' },
   { key: 'viewers_count', dataKey: 'viewers_count', title: '观看人数', width: 100, align: 'center' },
   { key: 'views_count', dataKey: 'views_count', title: '观看次数', width: 100, align: 'center' },
-  { key: 'total_cash', dataKey: 'total_cash', title: '资金池(元)', width: 120, align: 'right' },
-  { key: 'total_score', dataKey: 'total_score', title: '资金池积分', width: 110, align: 'right' },
-  { key: 'exchange_rate', dataKey: 'exchange_rate', title: '汇率', width: 100, align: 'center' },
+  { key: 'total_cash', dataKey: 'total_cash', title: '总金额(元)', width: 120, align: 'right' },
+  { key: 'total_score', dataKey: 'total_score', title: '总积分', width: 110, align: 'right' },
+  { key: 'exchange_rate', dataKey: 'exchange_rate', title: '兑换比例', width: 100, align: 'center' },
   { key: 'is_settled', dataKey: 'is_settled', title: '状态', width: 100, align: 'center' },
   { key: 'remark', dataKey: 'remark', title: '备注', width: 150, align: 'left' },
 ]
@@ -27,7 +27,7 @@ export const chartGroups = [
     name: '收益趋势',
     fields: [
       { key: 'ad_revenue', name: '广告收益', color: '#e6a23c' },
-      { key: 'total_cash', name: '资金池', color: '#67c23a' }
+      { key: 'total_cash', name: '总金额', color: '#67c23a' }
     ]
   },
   {
