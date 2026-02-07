@@ -24,23 +24,7 @@
       </view>
     </view>
 
-    <!-- 图表区域 -->
-    <view class="chart-section pc-only">
-      <view class="chart-header">
-        <text class="chart-title">数据趋势</text>
-        <view class="chart-tabs">
-          <el-radio-group v-model="currentChartGroup" size="small" @change="updateChart">
-            <el-radio-button v-for="group in chartGroups" :key="group.id" :value="group.id">
-              {{ group.name }}
-            </el-radio-button>
-          </el-radio-group>
-        </view>
-      </view>
-      <view class="chart-container">
-        <div ref="chartRef" class="chart-dom"></div>
-        <el-empty v-if="!hasChartData" description="暂无图表数据" />
-      </view>
-    </view>
+    <!-- 未结算提示 -->
     <el-alert
       v-if="unsettledCount > 0"
       type="warning"
@@ -52,6 +36,7 @@
         <span>重要：您有 <strong>{{ unsettledCount }}</strong> 条未结算记录，请及时填写广告收入完成结算</span>
       </template>
     </el-alert>
+
     <!-- 表格区域 -->
     <view class="table-container" ref="tableContainer">
       <div class="virtual-table-wrapper pc-only" v-loading="loading">
@@ -171,7 +156,7 @@
       </div>
     </view>
 
-    <!-- 底部区域 -->
+    <!-- 分页区域 -->
     <view class="table-footer">
       <view class="footer-left"></view>
       <view class="footer-right">
@@ -185,6 +170,24 @@
           @size-change="handleSizeChange"
           @current-change="handlePageChange"
         />
+      </view>
+    </view>
+
+    <!-- 图表区域 -->
+    <view class="chart-section pc-only">
+      <view class="chart-header">
+        <text class="chart-title">数据趋势</text>
+        <view class="chart-tabs">
+          <el-radio-group v-model="currentChartGroup" size="small" @change="updateChart">
+            <el-radio-button v-for="group in chartGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </el-radio-button>
+          </el-radio-group>
+        </view>
+      </view>
+      <view class="chart-container">
+        <div ref="chartRef" class="chart-dom"></div>
+        <el-empty v-if="!hasChartData" description="暂无图表数据" />
       </view>
     </view>
 
@@ -326,12 +329,12 @@ const dateShortcuts = [
 // ========== 状态 ==========
 const loading = ref(false)
 const dateRange = ref([])
-const tableHeight = ref(500)
+const tableHeight = ref(500) // 固定高度500px
 const tableContainer = ref(null)
 const tableRef = ref(null)
 
 const tableData = reactive({ list: [], total: 0 })
-const pagination = reactive({ currentPage: 1, pageSize: 20 })
+const pagination = reactive({ currentPage: 1, pageSize: 10 })
 
 // 未结算提示
 const unsettledCount = ref(0)
@@ -375,16 +378,6 @@ const computedColumns = computed(() => [
 ])
 
 // ========== 方法 ==========
-const calculateTableHeight = () => {
-  nextTick(() => {
-    const windowHeight = uni.getSystemInfoSync().windowHeight
-    const container = tableContainer.value?.$el || tableContainer.value
-    tableHeight.value = container
-      ? windowHeight - container.getBoundingClientRect().top - 100
-      : windowHeight - 280
-  })
-}
-
 const loadData = async () => {
   loading.value = true
   try {
@@ -637,7 +630,6 @@ const handleRemarkSubmit = async () => {
 onLoad(() => {
   loadData()
   checkUnsettled()
-  setTimeout(calculateTableHeight, 300)
 })
 
 onMounted(() => {
@@ -812,7 +804,7 @@ page {
   background-color: #fff;
   padding: 12px 24px;
   border-radius: 8px;
-  margin-top: 16px;
+  margin: 16px 0;
   flex-wrap: wrap;
   gap: 12px;
 
