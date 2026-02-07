@@ -2,7 +2,7 @@
  * 订单管理 - 表格列配置
  */
 export const columns = [
-  { key: 'order_no', dataKey: 'order_no', title: '订单编号', width: 220 },
+  { key: 'order_no', dataKey: 'order_no', title: '订单编号', width: 240 },
   { key: 'goods_name', dataKey: 'goods_name', title: '商品名称', width: 180 },
   { key: 'user_nickname', dataKey: 'user_nickname', title: '用户昵称', width: 120 },
   { key: 'score_cost', dataKey: 'score_cost', title: '消耗积分', width: 100, align: 'right' },
