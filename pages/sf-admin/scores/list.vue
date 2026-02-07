@@ -54,36 +54,38 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'type'">
-                  <el-tag :type="rowData[column.key] === 1 ? 'success' : 'danger'" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] === 1 ? '收入' : '支出' }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'score'">
-                  <span :class="rowData.type === 1 ? 'score-income' : 'score-expense'">
-                    {{ rowData.type === 1 ? '+' : '-' }}{{ Math.abs(rowData[column.key]) }}
-                  </span>
-                </template>
-                <template v-else-if="column.key === 'balance'">
-                  <span class="balance-text">{{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'source'">
-                  <el-tag :type="getSourceType(rowData[column.key])" size="small" :disable-transitions="true">
-                    {{ getSourceLabel(rowData[column.key]) }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'create_date'">
-                  {{ formatDate(rowData[column.key]) }}
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button type="primary" size="small" link @click="handleEdit(rowData)">备注</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'type'">
+                    <el-tag :type="rowData[column.key] === 1 ? 'success' : 'danger'" size="small" :disable-transitions="true">
+                      {{ rowData[column.key] === 1 ? '收入' : '支出' }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'score'">
+                    <span :class="rowData.type === 1 ? 'score-income' : 'score-expense'">
+                      {{ rowData.type === 1 ? '+' : '-' }}{{ Math.abs(rowData[column.key]) }}
+                    </span>
+                  </template>
+                  <template v-else-if="column.key === 'balance'">
+                    <span class="balance-text">{{ formatNumber(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'source'">
+                    <el-tag :type="getSourceType(rowData[column.key])" size="small" :disable-transitions="true">
+                      {{ getSourceLabel(rowData[column.key]) }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'create_date'">
+                    {{ formatDate(rowData[column.key]) }}
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button type="primary" size="small" link @click="handleEdit(rowData)">备注</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -443,6 +445,12 @@ page {
         color: #606266;
       }
 
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .el-table-v2__row:hover .row-actions {
         opacity: 1;
       }
@@ -506,6 +514,13 @@ page {
 .balance-text {
   color: #409eff;
   font-weight: 500;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {

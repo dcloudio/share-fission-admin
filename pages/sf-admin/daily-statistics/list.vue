@@ -82,30 +82,32 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'ad_revenue' || column.key === 'total_cash'">
-                  <span class="money-text">{{ formatMoney(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'exchange_rate'">
-                  <span>{{ rowData[column.key]?.toFixed(4) || '-' }}</span>
-                </template>
-                <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score', 'viewers_count', 'views_count'].includes(column.key)">
-                  <span class="score-text">{{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'is_settled'">
-                  <el-tag :type="rowData[column.key] ? 'success' : 'warning'" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] ? '已结算' : '未结算' }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button v-if="!rowData.is_settled" type="primary" size="small" link @click="handleFillRevenue(rowData)">填写广告收入</el-button>
-                    <el-button type="primary" size="small" link @click="handleEditRemark(rowData)">备注</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'ad_revenue' || column.key === 'total_cash'">
+                    <span class="money-text">{{ formatMoney(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'exchange_rate'">
+                    <span>{{ rowData[column.key]?.toFixed(4) || '-' }}</span>
+                  </template>
+                  <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score', 'viewers_count', 'views_count'].includes(column.key)">
+                    <span class="score-text">{{ formatNumber(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'is_settled'">
+                    <el-tag :type="rowData[column.key] ? 'success' : 'warning'" size="small" :disable-transitions="true">
+                      {{ rowData[column.key] ? '已结算' : '未结算' }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button v-if="!rowData.is_settled" type="primary" size="small" link @click="handleFillRevenue(rowData)">填写广告收入</el-button>
+                      <el-button type="primary" size="small" link @click="handleEditRemark(rowData)">备注</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -716,6 +718,12 @@ page {
         font-weight: 600;
         color: #606266;
       }
+
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
 }
@@ -758,6 +766,13 @@ page {
 .score-text {
   color: #409eff;
   font-weight: 500;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chart-section {

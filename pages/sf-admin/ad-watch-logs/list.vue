@@ -53,40 +53,42 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'user_info'">
-                  <view class="user-info-cell">
-                    <el-avatar :size="32" :src="rowData.user_avatar" v-if="rowData.user_avatar">
-                      <template #default>
+                <div class="cell-content">
+                  <template v-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'user_info'">
+                    <view class="user-info-cell">
+                      <el-avatar :size="32" :src="rowData.user_avatar" v-if="rowData.user_avatar">
+                        <template #default>
+                          <el-icon><User /></el-icon>
+                        </template>
+                      </el-avatar>
+                      <el-avatar :size="32" v-else>
                         <el-icon><User /></el-icon>
-                      </template>
-                    </el-avatar>
-                    <el-avatar :size="32" v-else>
-                      <el-icon><User /></el-icon>
-                    </el-avatar>
-                    <view class="user-text">
-                      <span class="user-nickname">{{ rowData.user_nickname || '未知用户' }}</span>
-                      <span class="user-id">{{ rowData.user_id }}</span>
+                      </el-avatar>
+                      <view class="user-text">
+                        <span class="user-nickname">{{ rowData.user_nickname || '未知用户' }}</span>
+                        <span class="user-id">{{ rowData.user_id }}</span>
+                      </view>
                     </view>
-                  </view>
-                </template>
-                <template v-else-if="column.key === 'is_realtime'">
-                  <el-tag :type="rowData[column.key] ? 'success' : 'info'" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] ? '是' : '否' }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'score'">
-                  <span class="score-text">{{ rowData[column.key] ?? '-' }}</span>
-                </template>
-                <template v-else-if="column.key === 'revenue'">
-                  <span class="revenue-text">{{ rowData[column.key] != null ? '¥ ' + rowData[column.key].toFixed(4) : '-' }}</span>
-                </template>
-                <template v-else-if="column.key === 'watch_time' || column.key === 'create_time'">
-                  {{ formatTime(rowData[column.key]) }}
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                  </template>
+                  <template v-else-if="column.key === 'is_realtime'">
+                    <el-tag :type="rowData[column.key] ? 'success' : 'info'" size="small" :disable-transitions="true">
+                      {{ rowData[column.key] ? '是' : '否' }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'score'">
+                    <span class="score-text">{{ rowData[column.key] ?? '-' }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'revenue'">
+                    <span class="revenue-text">{{ rowData[column.key] != null ? '¥ ' + rowData[column.key].toFixed(4) : '-' }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'watch_time' || column.key === 'create_time'">
+                    {{ formatTime(rowData[column.key]) }}
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -117,7 +119,7 @@
                   <el-avatar :size="24" v-else>
                     <el-icon><User /></el-icon>
                   </el-avatar>
-                  <text class="value">{{ item.user_nickname || '未知用户' }}</text>
+                  <text class="value">{{ item.user_nickname || item.user_username || '未知用户' }}</text>
                 </view>
               </view>
               <view class="info-row">
@@ -349,6 +351,12 @@ page {
         font-weight: 600;
         color: #606266;
       }
+
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
 }
@@ -419,6 +427,13 @@ page {
 .revenue-text {
   color: #f56c6c;
   font-weight: 500;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {

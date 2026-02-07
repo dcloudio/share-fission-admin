@@ -173,37 +173,39 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'type'">
-                  <el-tag :type="getTypeTagType(rowData[column.key])" size="small" :disable-transitions="true">
-                    {{ getTypeLabel(rowData[column.key]) }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'cash_change'">
-                  <span :class="['change-value', rowData[column.key] >= 0 ? 'positive' : 'negative']">
-                    {{ rowData[column.key] >= 0 ? '+' : '' }}¥ {{ formatNumber(rowData[column.key]) }}
-                  </span>
-                </template>
-                <template v-else-if="column.key === 'score_change'">
-                  <span :class="['change-value', rowData[column.key] >= 0 ? 'positive' : 'negative']">
-                    {{ rowData[column.key] >= 0 ? '+' : '' }}{{ formatInteger(rowData[column.key]) }}
-                  </span>
-                </template>
-                <template v-else-if="column.key === 'cash_balance'">
-                  <span class="balance-value">¥ {{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'score_balance'">
-                  <span class="balance-value">{{ formatInteger(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'exchange_rate'">
-                  {{ rowData[column.key] }}
-                </template>
-                <template v-else-if="column.key === 'create_time'">
-                  {{ formatTime(rowData[column.key]) }}
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'type'">
+                    <el-tag :type="getTypeTagType(rowData[column.key])" size="small" :disable-transitions="true">
+                      {{ getTypeLabel(rowData[column.key]) }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'cash_change'">
+                    <span :class="['change-value', rowData[column.key] >= 0 ? 'positive' : 'negative']">
+                      {{ rowData[column.key] >= 0 ? '+' : '' }}¥ {{ formatNumber(rowData[column.key]) }}
+                    </span>
+                  </template>
+                  <template v-else-if="column.key === 'score_change'">
+                    <span :class="['change-value', rowData[column.key] >= 0 ? 'positive' : 'negative']">
+                      {{ rowData[column.key] >= 0 ? '+' : '' }}{{ formatInteger(rowData[column.key]) }}
+                    </span>
+                  </template>
+                  <template v-else-if="column.key === 'cash_balance'">
+                    <span class="balance-value">¥ {{ formatNumber(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'score_balance'">
+                    <span class="balance-value">{{ formatInteger(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'exchange_rate'">
+                    {{ rowData[column.key] }}
+                  </template>
+                  <template v-else-if="column.key === 'create_time'">
+                    {{ formatTime(rowData[column.key]) }}
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -740,6 +742,12 @@ page {
         font-weight: 600;
         color: #606266;
       }
+
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
 }
@@ -788,6 +796,13 @@ page {
 
 .balance-value {
   color: #606266;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {

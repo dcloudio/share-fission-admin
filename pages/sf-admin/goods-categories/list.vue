@@ -72,47 +72,49 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'selection'">
-                  <el-checkbox
-                    :model-value="isRowSelected(rowData)"
-                    @change="(val) => handleRowSelect(rowData, val)"
-                  />
-                </template>
-                <template v-else-if="column.key === 'index'">
-                  {{ rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'name'">
-                  <view class="tree-cell" :style="{ paddingLeft: (rowData.level - 1) * 20 + 'px' }">
-                    <span class="expand-icon" @click.stop="toggleExpand(rowData)" v-if="rowData.hasChildren">
-                      <el-icon><ArrowRight v-if="!rowData.isExpanded" /><ArrowDown v-else /></el-icon>
-                    </span>
-                    <span class="expand-placeholder" v-else></span>
-                    <span>{{ rowData.name }}</span>
-                  </view>
-                </template>
-                <template v-else-if="column.key === 'parent_name'">
-                  <span>{{ rowData.parent_name || '-' }}</span>
-                </template>
-                <template v-else-if="column.key === 'level'">
-                  <el-tag :type="getLevelType(rowData.level)" size="small" :disable-transitions="true">
-                    {{ rowData.level }}级
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'status'">
-                  <el-switch
-                    :model-value="rowData.status === 1"
-                    @change="(val) => handleStatusChange(rowData, val)"
-                    :loading="rowData._statusLoading"
-                  />
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button v-if="rowData.level === 1" type="primary" size="small" link @click="handleAddChild(rowData)">添加子分类</el-button>
-                    <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
-                    <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'selection'">
+                    <el-checkbox
+                      :model-value="isRowSelected(rowData)"
+                      @change="(val) => handleRowSelect(rowData, val)"
+                    />
+                  </template>
+                  <template v-else-if="column.key === 'index'">
+                    {{ rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'name'">
+                    <view class="tree-cell" :style="{ paddingLeft: (rowData.level - 1) * 20 + 'px' }">
+                      <span class="expand-icon" @click.stop="toggleExpand(rowData)" v-if="rowData.hasChildren">
+                        <el-icon><ArrowRight v-if="!rowData.isExpanded" /><ArrowDown v-else /></el-icon>
+                      </span>
+                      <span class="expand-placeholder" v-else></span>
+                      <span>{{ rowData.name }}</span>
+                    </view>
+                  </template>
+                  <template v-else-if="column.key === 'parent_name'">
+                    <span>{{ rowData.parent_name || '-' }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'level'">
+                    <el-tag :type="getLevelType(rowData.level)" size="small" :disable-transitions="true">
+                      {{ rowData.level }}级
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'status'">
+                    <el-switch
+                      :model-value="rowData.status === 1"
+                      @change="(val) => handleStatusChange(rowData, val)"
+                      :loading="rowData._statusLoading"
+                    />
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button v-if="rowData.level === 1" type="primary" size="small" link @click="handleAddChild(rowData)">添加子分类</el-button>
+                      <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -660,6 +662,12 @@ page {
         color: #606266;
       }
 
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .el-table-v2__row:hover .row-actions {
         opacity: 1;
       }
@@ -740,6 +748,13 @@ page {
       }
     }
   }
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {

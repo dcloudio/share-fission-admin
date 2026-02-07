@@ -37,158 +37,168 @@
       </template>
     </el-alert>
 
-    <!-- 表格区域 -->
-    <view class="table-container" ref="tableContainer">
-      <div class="virtual-table-wrapper pc-only" v-loading="loading">
-        <el-auto-resizer>
-          <template #default="{ height, width }">
-            <el-table-v2
-              ref="tableRef"
-              :columns="computedColumns"
-              :data="tableData.list"
-              :width="width"
-              :height="tableHeight"
-              :row-height="54"
-              :header-height="48"
-              row-key="statement_date"
-              fixed
-              :row-class="getRowClass"
-            >
-              <template #header-cell="{ column }">
-                <template v-if="column.sortable">
-                  <view class="sortable-header" @click="handleSort(column.key)">
-                    <span>{{ column.title }}</span>
-                    <view class="sort-icons">
-                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'asc' }"><CaretTop /></el-icon>
-                      <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'desc' }"><CaretBottom /></el-icon>
+    <!-- Tab选项卡区域 -->
+    <view class="content-tabs">
+      <el-tabs type="border-card" v-model="activeTab" class="main-tabs">
+        <el-tab-pane label="数据列表" name="table">
+          <!-- 表格区域 -->
+          <view class="table-container" ref="tableContainer">
+            <div class="virtual-table-wrapper pc-only" v-loading="loading">
+              <el-auto-resizer>
+                <template #default="{ height, width }">
+                  <el-table-v2
+                    ref="tableRef"
+                    :columns="computedColumns"
+                    :data="tableData.list"
+                    :width="width"
+                    :height="height"
+                    :row-height="54"
+                    :header-height="48"
+                    row-key="statement_date"
+                    fixed
+                    :row-class="getRowClass"
+                  >
+                    <template #header-cell="{ column }">
+                      <template v-if="column.sortable">
+                        <view class="sortable-header" @click="handleSort(column.key)">
+                          <span>{{ column.title }}</span>
+                          <view class="sort-icons">
+                            <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'asc' }"><CaretTop /></el-icon>
+                            <el-icon :class="{ active: sortState.field === column.key && sortState.order === 'desc' }"><CaretBottom /></el-icon>
+                          </view>
+                        </view>
+                      </template>
+                      <template v-else>{{ column.title }}</template>
+                    </template>
+                    <template #cell="{ column, rowData, rowIndex }">
+                      <div class="cell-content">
+                        <template v-if="column.key === 'index'">
+                          {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                        </template>
+                        <template v-else-if="column.key === 'ad_revenue' || column.key === 'total_cash'">
+                          <span class="money-text">{{ formatMoney(rowData[column.key]) }}</span>
+                        </template>
+                        <template v-else-if="column.key === 'exchange_rate'">
+                          <span>{{ rowData[column.key]?.toFixed(4) || '-' }}</span>
+                        </template>
+                        <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score', 'viewers_count', 'views_count'].includes(column.key)">
+                          <span class="score-text">{{ formatNumber(rowData[column.key]) }}</span>
+                        </template>
+                        <template v-else-if="column.key === 'is_settled'">
+                          <el-tag :type="rowData[column.key] ? 'success' : 'warning'" size="small" :disable-transitions="true">
+                            {{ rowData[column.key] ? '已结算' : '未结算' }}
+                          </el-tag>
+                        </template>
+                        <template v-else-if="column.key === 'actions'">
+                          <view class="row-actions">
+                            <el-button v-if="!rowData.is_settled" type="primary" size="small" link @click="handleFillRevenue(rowData)">填写广告收入</el-button>
+                            <el-button type="primary" size="small" link @click="handleEditRemark(rowData)">备注</el-button>
+                          </view>
+                        </template>
+                        <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                      </div>
+                    </template>
+                  </el-table-v2>
+                </template>
+              </el-auto-resizer>
+            </div>
+
+              <!-- 移动端列表视图 -->
+              <div class="mobile-list-container mobile-only" v-loading="loading">
+                <template v-if="tableData.list.length > 0">
+                  <view class="mobile-card" v-for="(item, index) in tableData.list" :key="item._id">
+                    <view class="card-header">
+                      <view class="header-main">
+                        <text class="card-title">{{ item._id }}</text>
+                        <el-tag :type="item.is_settled ? 'success' : 'warning'" size="small">
+                          {{ item.is_settled ? '已结算' : '未结算' }}
+                        </el-tag>
+                      </view>
+                      <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
+                    </view>
+
+                    <view class="card-body">
+                      <view class="info-row">
+                        <text class="label">广告收益</text>
+                        <text class="value price">{{ formatMoney(item.ad_revenue) }} 元</text>
+                      </view>
+                      <view class="info-row">
+                        <text class="label">新增积分</text>
+                        <text class="value">{{ formatNumber(item.score_added) }}</text>
+                      </view>
+                      <view class="info-row">
+                        <text class="label">消耗积分</text>
+                        <text class="value">{{ formatNumber(item.score_consumed) }}</text>
+                      </view>
+                      <view class="info-row">
+                        <text class="label">提现积分</text>
+                        <text class="value">{{ formatNumber(item.score_withdrawn) }}</text>
+                      </view>
+                      <view class="info-row">
+                        <text class="label">新增/活跃用户</text>
+                        <text class="value">{{ item.new_users || 0 }} / {{ item.active_users || 0 }}</text>
+                      </view>
+                      <view class="info-row">
+                        <text class="label">资金池</text>
+                        <text class="value price">{{ formatMoney(item.total_cash) }} 元</text>
+                      </view>
+                      <view class="info-row" v-if="item.remark">
+                        <text class="label">备注</text>
+                        <text class="value">{{ item.remark }}</text>
+                      </view>
+                    </view>
+
+                    <view class="card-footer">
+                      <el-button v-if="!item.is_settled" type="primary" link size="small" @click="handleFillRevenue(item)">
+                        <el-icon><Money /></el-icon> 填写广告收入
+                      </el-button>
+                      <el-button type="primary" link size="small" @click="handleEditRemark(item)">
+                        <el-icon><Edit /></el-icon> 备注
+                      </el-button>
                     </view>
                   </view>
                 </template>
-                <template v-else>{{ column.title }}</template>
-              </template>
-              <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'ad_revenue' || column.key === 'total_cash'">
-                  <span class="money-text">{{ formatMoney(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'exchange_rate'">
-                  <span>{{ rowData[column.key]?.toFixed(4) || '-' }}</span>
-                </template>
-                <template v-else-if="['score_added', 'score_consumed', 'score_withdrawn', 'total_score', 'viewers_count', 'views_count'].includes(column.key)">
-                  <span class="score-text">{{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'is_settled'">
-                  <el-tag :type="rowData[column.key] ? 'success' : 'warning'" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] ? '已结算' : '未结算' }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button v-if="!rowData.is_settled" type="primary" size="small" link @click="handleFillRevenue(rowData)">填写广告收入</el-button>
-                    <el-button type="primary" size="small" link @click="handleEditRemark(rowData)">备注</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
-              </template>
-            </el-table-v2>
-          </template>
-        </el-auto-resizer>
-      </div>
-
-      <!-- 移动端列表视图 -->
-      <div class="mobile-list-container mobile-only" v-loading="loading">
-        <template v-if="tableData.list.length > 0">
-          <view class="mobile-card" v-for="(item, index) in tableData.list" :key="item._id">
-            <view class="card-header">
-              <view class="header-main">
-                <text class="card-title">{{ item._id }}</text>
-                <el-tag :type="item.is_settled ? 'success' : 'warning'" size="small">
-                  {{ item.is_settled ? '已结算' : '未结算' }}
-                </el-tag>
-              </view>
-              <text class="card-index">#{{ (pagination.currentPage - 1) * pagination.pageSize + index + 1 }}</text>
+                <el-empty v-else description="暂无数据" />
+              </div>
             </view>
 
-            <view class="card-body">
-              <view class="info-row">
-                <text class="label">广告收益</text>
-                <text class="value price">{{ formatMoney(item.ad_revenue) }} 元</text>
-              </view>
-              <view class="info-row">
-                <text class="label">新增积分</text>
-                <text class="value">{{ formatNumber(item.score_added) }}</text>
-              </view>
-              <view class="info-row">
-                <text class="label">消耗积分</text>
-                <text class="value">{{ formatNumber(item.score_consumed) }}</text>
-              </view>
-              <view class="info-row">
-                <text class="label">提现积分</text>
-                <text class="value">{{ formatNumber(item.score_withdrawn) }}</text>
-              </view>
-              <view class="info-row">
-                <text class="label">新增/活跃用户</text>
-                <text class="value">{{ item.new_users || 0 }} / {{ item.active_users || 0 }}</text>
-              </view>
-              <view class="info-row">
-                <text class="label">资金池</text>
-                <text class="value price">{{ formatMoney(item.total_cash) }} 元</text>
-              </view>
-              <view class="info-row" v-if="item.remark">
-                <text class="label">备注</text>
-                <text class="value">{{ item.remark }}</text>
+            <!-- 分页区域 -->
+            <view class="table-footer">
+              <view class="footer-left"></view>
+              <view class="footer-right">
+                <el-pagination
+                  v-model:current-page="pagination.currentPage"
+                  v-model:page-size="pagination.pageSize"
+                  :page-sizes="[10, 20, 50, 100]"
+                  :total="tableData.total"
+                  background
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="handleSizeChange"
+                  @current-change="handlePageChange"
+                />
               </view>
             </view>
+        </el-tab-pane>
 
-            <view class="card-footer">
-              <el-button v-if="!item.is_settled" type="primary" link size="small" @click="handleFillRevenue(item)">
-                <el-icon><Money /></el-icon> 填写广告收入
-              </el-button>
-              <el-button type="primary" link size="small" @click="handleEditRemark(item)">
-                <el-icon><Edit /></el-icon> 备注
-              </el-button>
+        <el-tab-pane label="数据趋势" name="chart" class="pc-only">
+          <!-- 图表区域 -->
+          <view class="chart-section">
+            <view class="chart-header">
+              <view class="chart-tabs">
+                <el-radio-group v-model="currentChartGroup" size="small" @change="updateChart">
+                  <el-radio-button v-for="group in chartGroups" :key="group.id" :value="group.id">
+                    {{ group.name }}
+                  </el-radio-button>
+                </el-radio-group>
+              </view>
+            </view>
+            <view class="chart-container">
+              <div ref="chartRef" class="chart-dom"></div>
+              <el-empty v-if="!hasChartData" description="暂无图表数据" />
             </view>
           </view>
-        </template>
-        <el-empty v-else description="暂无数据" />
-      </div>
-    </view>
-
-    <!-- 分页区域 -->
-    <view class="table-footer">
-      <view class="footer-left"></view>
-      <view class="footer-right">
-        <el-pagination
-          v-model:current-page="pagination.currentPage"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="tableData.total"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
-      </view>
-    </view>
-
-    <!-- 图表区域 -->
-    <view class="chart-section pc-only">
-      <view class="chart-header">
-        <text class="chart-title">数据趋势</text>
-        <view class="chart-tabs">
-          <el-radio-group v-model="currentChartGroup" size="small" @change="updateChart">
-            <el-radio-button v-for="group in chartGroups" :key="group.id" :value="group.id">
-              {{ group.name }}
-            </el-radio-button>
-          </el-radio-group>
-        </view>
-      </view>
-      <view class="chart-container">
-        <div ref="chartRef" class="chart-dom"></div>
-        <el-empty v-if="!hasChartData" description="暂无图表数据" />
-      </view>
+        </el-tab-pane>
+      </el-tabs>
     </view>
 
     <!-- 填写广告收入弹窗 -->
@@ -287,7 +297,7 @@ const sfCo = uniCloud.importObject('share-fission-co', { customUI: true })
 const chartRef = ref(null)
 let chartInstance = null
 const currentChartGroup = ref('revenue')
-const hasChartData = computed(() => tableData.list && tableData.list.length > 0)
+const hasChartData = computed(() => chartData.value && chartData.value.length > 0)
 
 // ========== 配置 ==========
 const pageConfig = reactive({
@@ -329,12 +339,15 @@ const dateShortcuts = [
 // ========== 状态 ==========
 const loading = ref(false)
 const dateRange = ref([])
-const tableHeight = ref(500) // 固定高度500px
+const activeTab = ref('table') // 当前激活的tab
 const tableContainer = ref(null)
 const tableRef = ref(null)
 
 const tableData = reactive({ list: [], total: 0 })
 const pagination = reactive({ currentPage: 1, pageSize: 10 })
+
+// 图表数据（不分页，用于显示完整趋势）
+const chartData = ref([])
 
 // 未结算提示
 const unsettledCount = ref(0)
@@ -401,12 +414,37 @@ const loadData = async () => {
     })
     tableData.list = res.list || []
     tableData.total = res.total || 0
-    // 更新图表
-    nextTick(() => updateChart())
+
+    // 同时加载图表数据（不分页）
+    loadChartData()
   } catch (e) {
     ElMessage.error('加载数据失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 加载图表数据（不分页，获取完整数据）
+const loadChartData = async () => {
+  try {
+    const data = {
+      pageIndex: 1,
+      pageSize: 1000 // 获取足够多的数据用于图表显示
+    }
+    // 日期范围
+    if (dateRange.value && dateRange.value.length === 2) {
+      data.startDate = dateRange.value[0]
+      data.endDate = dateRange.value[1]
+    }
+    const res = await sfCo.action({
+      name: 'admin/dailyStatistics/getList',
+      data
+    })
+    chartData.value = res.list || []
+    // 更新图表
+    nextTick(() => updateChart())
+  } catch (e) {
+    console.error('加载图表数据失败', e)
   }
 }
 
@@ -432,13 +470,13 @@ const initChart = () => {
 
 // 更新图表
 const updateChart = () => {
-  if (!chartInstance || !tableData.list || tableData.list.length === 0) return
+  if (!chartInstance || !chartData.value || chartData.value.length === 0) return
 
   const group = chartGroups.find(g => g.id === currentChartGroup.value)
   if (!group) return
 
   // 按日期升序排列
-  const sortedList = [...tableData.list].sort((a, b) => a.statement_date.localeCompare(b.statement_date))
+  const sortedList = [...chartData.value].sort((a, b) => a.statement_date.localeCompare(b.statement_date))
 
   const option = {
     tooltip: {
@@ -626,6 +664,18 @@ const handleRemarkSubmit = async () => {
   }
 }
 
+// 监听tab切换
+watch(activeTab, (newTab) => {
+  if (newTab === 'chart') {
+    nextTick(() => {
+      if (!chartInstance) {
+        initChart()
+      }
+      updateChart()
+    })
+  }
+})
+
 // ========== 生命周期 ==========
 onLoad(() => {
   loadData()
@@ -633,9 +683,12 @@ onLoad(() => {
 })
 
 onMounted(() => {
-  nextTick(() => {
-    initChart()
-  })
+  // 如果默认显示图表tab，则初始化图表
+  if (activeTab.value === 'chart') {
+    nextTick(() => {
+      initChart()
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -653,10 +706,12 @@ page {
   flex-direction: column;
   padding: 10px;
   box-sizing: border-box;
+  height: calc(100vh - 90px);
 }
 
 .unsettled-alert {
   margin-bottom: 16px;
+  flex-shrink: 0;
 
   strong {
     color: #e6a23c;
@@ -664,6 +719,35 @@ page {
   }
 }
 
+
+.content-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  :deep(.main-tabs) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    .el-tabs__header {
+      margin-bottom: 16px;
+    }
+
+    .el-tabs__content {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .el-tab-pane {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}
 
 .toolbar {
   display: flex;
@@ -675,6 +759,7 @@ page {
   margin-bottom: 16px;
   flex-wrap: wrap;
   gap: 12px;
+  flex-shrink: 0;
 
   .toolbar-left,
   .toolbar-right {
@@ -697,9 +782,12 @@ page {
   border-radius: 8px;
   overflow: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 
   .virtual-table-wrapper {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
 
     :deep(.el-table-v2) {
       .el-table-v2__header-cell,
@@ -708,8 +796,21 @@ page {
         font-weight: 600;
         color: #606266;
       }
+
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sortable-header {
@@ -756,21 +857,19 @@ page {
   background-color: #fff;
   border-radius: 8px;
   padding: 16px 24px;
-  margin-bottom: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   .chart-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 16px;
     flex-wrap: wrap;
     gap: 12px;
-
-    .chart-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #303133;
-    }
+    flex-shrink: 0;
 
     .chart-tabs {
       display: flex;
@@ -779,9 +878,10 @@ page {
   }
 
   .chart-container {
+    flex: 1;
     width: 100%;
-    height: 350px;
     position: relative;
+    min-height: 0;
 
     .chart-dom {
       width: 100%;
@@ -803,10 +903,11 @@ page {
   align-items: center;
   background-color: #fff;
   padding: 12px 24px;
-  border-radius: 8px;
-  margin: 16px 0;
+  border-radius: 0 0 8px 8px;
   flex-wrap: wrap;
   gap: 12px;
+  flex-shrink: 0;
+  border-top: 1px solid #f0f2f5;
 
   .footer-left {
     display: flex;

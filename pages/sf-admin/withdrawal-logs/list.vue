@@ -57,56 +57,58 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'status'">
-                  <el-tag :type="getStatusType(rowData[column.key])" size="small" :disable-transitions="true">
-                    {{ getStatusLabel(rowData[column.key]) }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'method'">
-                  {{ getMethodLabel(rowData[column.key]) }}
-                </template>
-                <template v-else-if="column.key === 'account_name'">
-                  {{ rowData.account_info?.name || '-' }}
-                </template>
-                <template v-else-if="column.key === 'account'">
-                  {{ rowData.account_info?.account || '-' }}
-                </template>
-                <template v-else-if="column.key === 'amount' || column.key === 'fee' || column.key === 'actual_amount'">
-                  <span class="amount-text">¥ {{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'create_time'">
-                  {{ formatTime(rowData[column.key]) }}
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button type="primary" size="small" link @click="handleView(rowData)">查看</el-button>
-                    <el-button
-                      v-if="rowData.status === 0"
-                      type="success"
-                      size="small"
-                      link
-                      @click="handleAudit(rowData, 1)"
-                    >通过</el-button>
-                    <el-button
-                      v-if="rowData.status === 0"
-                      type="danger"
-                      size="small"
-                      link
-                      @click="handleAudit(rowData, 2)"
-                    >拒绝</el-button>
-                    <el-button
-                      v-if="rowData.status === 1"
-                      type="warning"
-                      size="small"
-                      link
-                      @click="handlePay(rowData)"
-                    >打款</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'status'">
+                    <el-tag :type="getStatusType(rowData[column.key])" size="small" :disable-transitions="true">
+                      {{ getStatusLabel(rowData[column.key]) }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'method'">
+                    {{ getMethodLabel(rowData[column.key]) }}
+                  </template>
+                  <template v-else-if="column.key === 'account_name'">
+                    {{ rowData.account_info?.name || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'account'">
+                    {{ rowData.account_info?.account || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'amount' || column.key === 'fee' || column.key === 'actual_amount'">
+                    <span class="amount-text">¥ {{ formatNumber(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'create_time'">
+                    {{ formatTime(rowData[column.key]) }}
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button type="primary" size="small" link @click="handleView(rowData)">查看</el-button>
+                      <el-button
+                        v-if="rowData.status === 0"
+                        type="success"
+                        size="small"
+                        link
+                        @click="handleAudit(rowData, 1)"
+                      >通过</el-button>
+                      <el-button
+                        v-if="rowData.status === 0"
+                        type="danger"
+                        size="small"
+                        link
+                        @click="handleAudit(rowData, 2)"
+                      >拒绝</el-button>
+                      <el-button
+                        v-if="rowData.status === 1"
+                        type="warning"
+                        size="small"
+                        link
+                        @click="handlePay(rowData)"
+                      >打款</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -647,6 +649,13 @@ page {
 .amount-text {
   color: #f56c6c;
   font-weight: 500;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {

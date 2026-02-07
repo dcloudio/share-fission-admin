@@ -79,57 +79,59 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'selection'">
-                  <el-checkbox
-                    :model-value="isRowSelected(rowData)"
-                    @change="(val) => handleRowSelect(rowData, val)"
-                  />
-                </template>
-                <template v-else-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'image'">
-                  <el-image
-                    v-if="rowData.images && rowData.images.length"
-                    :src="rowData.images[0]"
-                    :preview-src-list="rowData.images"
-                    fit="cover"
-                    style="width: 50px; height: 50px; border-radius: 4px;"
-                  />
-                  <span v-else class="no-image">-</span>
-                </template>
-                <template v-else-if="column.key === 'category_name'">
-                  {{ rowData.category_name || '-' }}
-                </template>
-                <template v-else-if="column.key === 'sales_count'">
-                  {{ rowData.sales_count || 0 }}
-                </template>
-                <template v-else-if="column.key === 'score_cost'">
-                  <span class="score-text">{{ formatInteger(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'stock'">
-                  <span :class="['stock-text', rowData[column.key] <= 10 ? 'low' : '']">
-                    {{ rowData[column.key] }}
-                  </span>
-                </template>
-                <template v-else-if="column.key === 'status'">
-                  <el-switch
-                    :model-value="rowData[column.key] === 1"
-                    @change="(val) => handleStatusChange(rowData, val)"
-                    :loading="rowData._statusLoading"
-                  />
-                </template>
-                <template v-else-if="column.key === 'create_time'">
-                  {{ formatTime(rowData[column.key]) }}
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button type="warning" size="small" link @click="handleCardKeys(rowData)">卡密</el-button>
-                    <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
-                    <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <div class="cell-content">
+                  <template v-if="column.key === 'selection'">
+                    <el-checkbox
+                      :model-value="isRowSelected(rowData)"
+                      @change="(val) => handleRowSelect(rowData, val)"
+                    />
+                  </template>
+                  <template v-else-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'image'">
+                    <el-image
+                      v-if="rowData.images && rowData.images.length"
+                      :src="rowData.images[0]"
+                      :preview-src-list="rowData.images"
+                      fit="cover"
+                      style="width: 50px; height: 50px; border-radius: 4px;"
+                    />
+                    <span v-else class="no-image">-</span>
+                  </template>
+                  <template v-else-if="column.key === 'category_name'">
+                    {{ rowData.category_name || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'sales_count'">
+                    {{ rowData.sales_count || 0 }}
+                  </template>
+                  <template v-else-if="column.key === 'score_cost'">
+                    <span class="score-text">{{ formatInteger(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'stock'">
+                    <span :class="['stock-text', rowData[column.key] <= 10 ? 'low' : '']">
+                      {{ rowData[column.key] }}
+                    </span>
+                  </template>
+                  <template v-else-if="column.key === 'status'">
+                    <el-switch
+                      :model-value="rowData[column.key] === 1"
+                      @change="(val) => handleStatusChange(rowData, val)"
+                      :loading="rowData._statusLoading"
+                    />
+                  </template>
+                  <template v-else-if="column.key === 'create_time'">
+                    {{ formatTime(rowData[column.key]) }}
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button type="warning" size="small" link @click="handleCardKeys(rowData)">卡密</el-button>
+                      <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </div>
               </template>
             </el-table-v2>
           </template>
@@ -714,6 +716,12 @@ page {
         color: #606266;
       }
 
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .el-table-v2__row:hover .row-actions {
         opacity: 1;
       }
@@ -778,6 +786,13 @@ page {
 
 .no-image {
   color: #c0c4cc;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {
