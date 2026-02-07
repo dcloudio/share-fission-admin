@@ -22,12 +22,21 @@
 
           <el-row :gutter="40">
             <el-col :span="24" :xs="24">
+              <el-form-item label="积分模式" prop="ad_score_mode">
+                <el-radio-group v-model="formData.ad_score_mode">
+                  <el-radio :value="0">非实时模式</el-radio>
+                  <el-radio :value="1">实时模式</el-radio>
+                </el-radio-group>
+                <div class="form-tip">非实时模式：固定积分；实时模式：根据广告实际收益计算积分</div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="24" :xs="24" v-show="formData.ad_score_mode === 0">
               <el-form-item label="基础积分" prop="ad_score_base">
                 <el-input-number v-model="formData.ad_score_base" :min="0" :step="1" class="input-width" />
                 <div class="form-tip">非实时模式下，观看单次广告获得的基础积分</div>
               </el-form-item>
             </el-col>
-            <el-col :span="24" :xs="24">
+            <el-col :span="24" :xs="24" v-show="formData.ad_score_mode === 1">
               <el-form-item label="积分兑换比例" prop="ad_score_rate">
                 <el-input-number v-model="formData.ad_score_rate" :min="0" :step="10" class="input-width" />
                 <div class="form-tip">实时模式下，1元广告收益兑换的积分数量</div>
@@ -115,7 +124,6 @@
           <el-button type="primary" size="large" :loading="submitLoading" @click="handleSubmit">
             保存配置
           </el-button>
-          <el-button size="large" @click="loadData">重置</el-button>
         </div>
       </el-form>
     </view>

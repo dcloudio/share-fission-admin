@@ -36,6 +36,9 @@ module.exports = {
   // 函数执行后钩子
   _after(error, result) {
     if (error) {
+      if (error.errCode && error.errMsg) {
+        return error;
+      }
       throw error
     }
     if (typeof result === "object" && !result.errCode) result.errCode = 0;

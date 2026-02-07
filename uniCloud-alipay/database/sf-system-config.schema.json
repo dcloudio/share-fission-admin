@@ -11,6 +11,11 @@
     "_id": {
       "description": "固定值：main"
     },
+    "ad_score_mode": {
+      "bsonType": "int",
+      "description": "0: 非实时模式 1: 实时模式",
+      "defaultValue": 0
+    },
     "ad_score_base": {
       "bsonType": "int",
       "description": "单次广告基础积分（非实时模式）",
