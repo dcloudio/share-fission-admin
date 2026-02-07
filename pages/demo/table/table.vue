@@ -30,7 +30,7 @@
 
     <!-- 表格区域 -->
     <view class="table-container" ref="tableContainer">
-      <div class="virtual-table-wrapper pc-only" v-loading="loading">
+      <view class="virtual-table-wrapper pc-only" v-loading="loading">
         <el-auto-resizer>
           <template #default="{ height, width }">
             <el-table-v2
@@ -65,38 +65,40 @@
                 <template v-else>{{ column.title }}</template>
               </template>
               <template #cell="{ column, rowData, rowIndex }">
-                <template v-if="column.key === 'selection'">
-                  <el-checkbox
-                    :model-value="isRowSelected(rowData)"
-                    @change="(val) => handleRowSelect(rowData, val)"
-                  />
-                </template>
-                <template v-else-if="column.key === 'index'">
-                  {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
-                </template>
-                <template v-else-if="column.key === 'status'">
-                  <el-tag :type="getStatusType(rowData[column.key])" size="small" :disable-transitions="true">
-                    {{ rowData[column.key] }}
-                  </el-tag>
-                </template>
-                <template v-else-if="column.key === 'salary'">
-                  <span class="salary-text">¥ {{ formatNumber(rowData[column.key]) }}</span>
-                </template>
-                <template v-else-if="column.key === 'actions'">
-                  <view class="row-actions">
-                    <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
-                    <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
-                  </view>
-                </template>
-                <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                <view class="cell-content">
+                  <template v-if="column.key === 'selection'">
+                    <el-checkbox
+                      :model-value="isRowSelected(rowData)"
+                      @change="(val) => handleRowSelect(rowData, val)"
+                    />
+                  </template>
+                  <template v-else-if="column.key === 'index'">
+                    {{ (pagination.currentPage - 1) * pagination.pageSize + rowIndex + 1 }}
+                  </template>
+                  <template v-else-if="column.key === 'status'">
+                    <el-tag :type="getStatusType(rowData[column.key])" size="small" :disable-transitions="true">
+                      {{ rowData[column.key] }}
+                    </el-tag>
+                  </template>
+                  <template v-else-if="column.key === 'salary'">
+                    <span class="salary-text">¥ {{ formatNumber(rowData[column.key]) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <view class="row-actions">
+                      <el-button type="primary" size="small" link @click="handleEdit(rowData)">编辑</el-button>
+                      <el-button type="danger" size="small" link @click="handleDelete([rowData])">删除</el-button>
+                    </view>
+                  </template>
+                  <template v-else>{{ rowData[column.key] ?? '-' }}</template>
+                </view>
               </template>
             </el-table-v2>
           </template>
         </el-auto-resizer>
-      </div>
+      </view>
 
       <!-- 移动端列表视图 -->
-      <div class="mobile-list-container mobile-only" v-loading="loading">
+      <view class="mobile-list-container mobile-only" v-loading="loading">
         <template v-if="tableData.list.length > 0">
           <view class="mobile-card" v-for="(item, index) in tableData.list" :key="item._id">
             <view class="card-header">
@@ -137,7 +139,7 @@
           </view>
         </template>
         <el-empty v-else description="暂无数据" />
-      </div>
+      </view>
     </view>
 
     <!-- 底部区域 -->
@@ -569,6 +571,12 @@ page {
         color: #606266;
       }
 
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .el-table-v2__row:hover .row-actions {
         opacity: 1;
       }
@@ -622,6 +630,13 @@ page {
 .salary-text {
   color: #f56c6c;
   font-weight: 500;
+}
+
+.cell-content {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-footer {
