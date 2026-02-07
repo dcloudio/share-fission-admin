@@ -100,3 +100,10 @@ $menu-text-color-actived: #409eff; // 菜单激活前景色
 $left-window-bg-color: $menu-bg-color; // 左侧窗口背景色
 $top-window-bg-color: #fff; // 顶部窗口背景色
 $top-window-text-color: #999; // 顶部窗口前景色
+
+/* el-table-v2 单元格文本溢出处理 */
+:deep(.el-table-v2__row-cell) {
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+}
