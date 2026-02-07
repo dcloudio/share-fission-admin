@@ -83,99 +83,98 @@ class AdWatchLogsService extends BaseService {
   async getList(data = {}) {
     let { user_id, pageIndex = 1, pageSize = 20, keyword = '', sortField = '', sortOrder = 'desc' } = data;
 
-    let matchConditions = [];
+    // 构建查询条件
+    let where = {};
 
     // user_id 筛选
     if (user_id) {
-      matchConditions.push({ user_id: user_id });
+      where.user_id = user_id;
     }
 
     // 关键词搜索
     if (keyword) {
       if (libs.common.isObjectId(keyword)) {
-        matchConditions.push({
+        where = {
+          ...where,
           $or: [
             { _id: keyword },
             { user_id: keyword },
             { ad_id: keyword }
           ]
-        });
+        };
       } else {
-        matchConditions.push({
+        where = {
+          ...where,
           $or: [
             { user_id: { $regex: keyword, $options: 'i' } },
             { ad_id: { $regex: keyword, $options: 'i' } },
             { ad_type: { $regex: keyword, $options: 'i' } }
           ]
-        });
+        };
       }
     }
-
-    const skip = (pageIndex - 1) * pageSize;
-
-    // 构建聚合管道
-    let pipeline = [];
-
-    // 匹配条件
-    if (matchConditions.length > 0) {
-      pipeline.push({
-        $match: matchConditions.length === 1 ? matchConditions[0] : { $and: matchConditions }
-      });
-    }
-
-    // 关联用户表获取昵称和头像
-    pipeline.push({
-      $lookup: {
-        from: Tables.users,
-        localField: 'user_id',
-        foreignField: '_id',
-        as: 'user_info'
-      }
-    });
-
-    // 添加计算字段
-    pipeline.push({
-      $addFields: {
-        user_nickname: { $arrayElemAt: ['$user_info.nickname', 0] },
-        user_avatar: { $arrayElemAt: ['$user_info.avatar', 0] }
-      }
-    });
 
     // 排序
-    let sortObj = {};
+    let orderBy = {};
     if (sortField && sortOrder) {
-      sortObj[sortField] = sortOrder === 'asc' ? 1 : -1;
+      orderBy[sortField] = sortOrder;
     } else {
-      sortObj['create_time'] = -1;
+      orderBy['create_time'] = 'desc';
     }
-    if (sortField !== '_id') {
-      sortObj['_id'] = sortOrder === 'asc' ? 1 : -1;
-    }
-    pipeline.push({ $sort: sortObj });
 
-    // 统计总数的管道
-    const countPipeline = [...pipeline, { $count: 'total' }];
-
-    // 分页
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: pageSize });
-
-    // 移除不需要的字段
-    pipeline.push({
-      $project: {
-        user_info: 0
-      }
-    });
-
-    // 执行查询
+    // 第一次查询：获取广告观看记录列表和总数
     const [listResult, countResult] = await Promise.all([
-      this.collection.aggregate(pipeline).end(),
-      this.collection.aggregate(countPipeline).end()
+      this.collection
+        .where(where)
+        .orderBy(orderBy)
+        .skip((pageIndex - 1) * pageSize)
+        .limit(pageSize)
+        .get(),
+      this.collection.where(where).count()
     ]);
 
+    const list = listResult.data || [];
+    const total = countResult.total || 0;
+
+    // 如果没有数据，直接返回
+    if (list.length === 0) {
+      return { list: [], total: 0 };
+    }
+
+    // 第二次查询：批量获取用户信息
+    const userIds = [...new Set(list.map(item => item.user_id))];
+    const usersResult = await this.db.collection(Tables.users)
+      .where({
+        _id: this.db.command.in(userIds)
+      })
+      .field({
+        _id: true,
+        nickname: true,
+        username: true,
+        avatar: true
+      })
+      .get();
+
+    // 构建用户信息映射
+    const userMap = {};
+    (usersResult.data || []).forEach(user => {
+      userMap[user._id] = user;
+    });
+
+    // 合并用户信息到列表中
+    const resultList = list.map(item => {
+      const user = userMap[item.user_id] || {};
+      return {
+        ...item,
+        user_nickname: user.nickname || null,
+        user_username: user.username || null,
+        user_avatar: user.avatar || null
+      };
+    });
+
     return {
-      list: listResult.data || [],
-      total: countResult.data[0]?.total || 0
+      list: resultList,
+      total
     };
   }
 }

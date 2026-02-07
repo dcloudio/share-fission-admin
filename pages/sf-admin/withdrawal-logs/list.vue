@@ -588,6 +588,12 @@ page {
         color: #606266;
       }
 
+      .el-table-v2__row-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .el-table-v2__row:hover .row-actions {
         opacity: 1;
       }
