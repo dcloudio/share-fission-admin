@@ -202,7 +202,7 @@
         <el-descriptions-item label="记录ID" :span="2">{{ currentRow._id }}</el-descriptions-item>
         <el-descriptions-item label="用户ID" :span="2">{{ currentRow.user_id }}</el-descriptions-item>
         <el-descriptions-item label="提现积分">{{ currentRow.score }}</el-descriptions-item>
-        <el-descriptions-item label="兑换汇率">{{ currentRow.exchange_rate }} 元/积分</el-descriptions-item>
+        <el-descriptions-item label="兑换比例">{{ currentRow.exchange_rate }} 元/积分</el-descriptions-item>
         <el-descriptions-item label="提现金额">¥ {{ formatNumber(currentRow.amount) }}</el-descriptions-item>
         <el-descriptions-item label="手续费率">{{ (currentRow.fee_rate * 100).toFixed(1) }}%</el-descriptions-item>
         <el-descriptions-item label="手续费">¥ {{ formatNumber(currentRow.fee) }}</el-descriptions-item>

@@ -17,7 +17,7 @@
         <text class="pool-value score">{{ formatInteger(fundPool.total_score) }}</text>
       </view>
       <view class="pool-item">
-        <text class="pool-label">当前汇率</text>
+        <text class="pool-label">当前兑换比例</text>
         <text class="pool-value rate">{{ fundPool.exchange_rate }} 元/积分</text>
       </view>
       <view class="pool-item">
@@ -106,8 +106,8 @@
             style="width: 100%"
           />
           <div style="font-size: 12px; color: #909399; margin-top: 8px; line-height: 1.5;">
-            当前汇率：{{ fundPool.exchange_rate }} 元/积分<br/>
-            设为 0 则不启用保底机制，大于 0 且大于当前汇率时生效
+            当前兑换比例：{{ fundPool.exchange_rate }} 元/积分<br/>
+            设为 0 则不启用保底机制，大于 0 且大于当前兑换比例时生效
           </div>
         </el-form-item>
       </el-form>
@@ -245,7 +245,7 @@
                 <text class="value">{{ formatInteger(item.score_balance) }}</text>
               </view>
               <view class="info-row">
-                <text class="label">汇率</text>
+                <text class="label">兑换比例</text>
                 <text class="value">{{ item.exchange_rate }}</text>
               </view>
               <view class="info-row" v-if="item.remark">
@@ -473,9 +473,9 @@ const formatTime = (timestamp) => {
 }
 
 const getTypeTagType = (type) => {
-  const map = { 
-    'ad_income': 'success', 
-    'withdrawal': 'danger', 
+  const map = {
+    'ad_income': 'success',
+    'withdrawal': 'danger',
     'fee_return': 'warning',
     'deposit': 'primary'
   }
@@ -483,9 +483,9 @@ const getTypeTagType = (type) => {
 }
 
 const getTypeLabel = (type) => {
-  const map = { 
-    'ad_income': '广告收入', 
-    'withdrawal': '提现支出', 
+  const map = {
+    'ad_income': '广告收入',
+    'withdrawal': '提现支出',
     'fee_return': '手续费返还',
     'deposit': '投入资金'
   }
@@ -599,19 +599,19 @@ const handleSetMinimumRatio = async () => {
     const configRes = await sfCo.action({
       name: 'admin/config/get'
     })
-    
+
     const configData = configRes?.info || {}
     configData.minimum_exchange_ratio = minimumRatioForm.ratio
-    
+
     // 更新配置
     await sfCo.action({
       name: 'admin/config/update',
       data: configData
     })
-    
+
     ElMessage.success('保底兑换比例设置成功')
     setMinimumRatioDialogVisible.value = false
-    
+
     // 重新加载系统配置
     await loadSystemConfig()
   } catch (e) {
