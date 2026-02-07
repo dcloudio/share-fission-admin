@@ -43,6 +43,212 @@
 
 ## client 端
 
+### 核心功能
+
+#### 1. 猜谜游戏
+- **谜语题库**: 内置谜语数据集，支持难度分类(简单、中等、困难)和类型分类(自然、物品、水果、植物、身体、字谜等)
+- **答题流程**: 用户查看谜面 → 输入答案 → 验证正确性 → 答对进入下一题
+- **广告解锁**: 答不出时可观看激励视频广告解锁答案
+- **进度追踪**: 显示当前答题进度和题目序号
+- **页面路径**: `pages/index/index.vue`
+- **数据源**: `data/riddles.js` (200条谜语数据)
+
+#### 2. 积分系统
+- **积分获取**:
+  - 观看广告获得积分(主要来源)
+  - 每日签到奖励
+  - 团队分成收益(下线观看广告时获得)
+- **积分消耗**:
+  - 兑换商城商品
+  - 提现到账户
+- **积分记录**:
+  - 完整的积分流水记录
+  - 支持时间筛选(全部、今日、本周、本月)
+  - 显示积分来源、变化金额、余额
+- **页面路径**: `pages/ucenter/points-record/points-record.vue`
+
+#### 3. 二级分销系统
+- **分销推荐**:
+  - 生成专属推广二维码和邀请码
+  - 支持保存二维码到相册
+  - 一键复制推广链接
+  - 页面路径: `pages/ucenter/distribution-invite/distribution-invite.vue`
+  - 技术依赖: `uni_modules/Sansnn-uQRCode` 二维码生成库
+- **分销逻辑**:
+  - 支持两级分销体系(一级下线、二级下线)
+  - 通过 `inviter_uid` 数组记录上级关系链
+  - 下线观看广告时,上级自动获得分成
+  - 分成比例在系统配置中动态设置
+- **我的团队**:
+  - 收益统计卡片(积分收益、一级用户数、二级用户数)
+  - 时间筛选(全部、今日、本周、本月)
+  - 层级切换(一级下线、二级下线)
+  - 团队成员列表(头像、昵称、加入时间、贡献积分)
+  - 页面路径: `pages/ucenter/my-team/my-team.vue`
+- **数据结构**: 用户表中 `inviter_uid` 字段存储上级关系数组 `[一级上级uid, 二级上级uid]`
+
+#### 4. 积分商城
+- **商品展示**:
+  - 顶部显示当前积分余额
+  - 一级分类和二级分类筛选
+  - 商品列表展示(图片、名称、积分价格、库存)
+  - 支持按积分价格排序(升序/降序)
+- **商品兑换**:
+  - 商品详情页展示(图片、描述、价格、库存)
+  - 立即兑换功能
+  - 虚拟商品自动发卡机制
+  - 兑换记录查询
+- **页面路径**:
+  - 商城首页: `pages/ucenter/points-mall/points-mall.vue`
+  - 商品详情: `pages/ucenter/product-detail/product-detail.vue`
+  - 兑换记录: `pages/ucenter/exchange-order/exchange-order.vue`
+
+#### 5. 提现管理
+- **提现申请**:
+  - 显示可提现积分余额
+  - 提现规则展示(兑换比例、手续费、最低额度、到账时间)
+  - 提现方式选择(银行卡、支付宝)
+  - 账户信息填写表单
+  - 页面路径: `pages/ucenter/withdraw/withdraw.vue`
+- **提现记录**:
+  - 提现申请历史记录
+  - 状态跟踪(待审核、已通过、已拒绝)
+  - 显示提现金额、手续费、实际到账金额
+  - 申请时间、审核时间
+  - 页面路径: `pages/ucenter/withdraw-record/withdraw-record.vue`
+
+#### 6. 用户中心
+- **用户信息**: 头像、昵称、登录状态展示
+- **常用功能**:
+  - 我的积分
+  - 积分提现
+  - 分销推荐
+  - 去评分(App专用)
+- **更多服务**:
+  - 问题与反馈
+  - 设置
+  - 检查更新(App专用)
+  - 关于(App专用)
+- **页面路径**: `pages/ucenter/ucenter.vue`
+
+### 项目结构
+
+```
+share-fission/
+├── pages/                      # 页面文件
+│   ├── index/                  # 首页 - 猜谜语游戏
+│   ├── ucenter/                # 用户中心模块
+│   │   ├── ucenter.vue        # 用户中心主页
+│   │   ├── distribution-invite/   # 分销推荐
+│   │   ├── my-team/           # 我的团队
+│   │   ├── points-mall/       # 积分商城
+│   │   ├── points-record/     # 积分记录
+│   │   ├── product-detail/    # 商品详情
+│   │   ├── exchange-order/    # 兑换记录
+│   │   ├── withdraw/          # 积分提现
+│   │   └── withdraw-record/   # 提现记录
+│   └── uni-agree/             # 用户协议页面
+├── components/                 # 自定义组件
+├── data/                      # 数据文件
+│   └── riddles.js             # 谜语数据集(39条)
+├── common/                    # 公共模块
+│   └── appInit.js             # 应用初始化
+├── uni_modules/               # uni-app 模块
+│   ├── uni-id-pages/          # 用户认证模块
+│   ├── uni-ui/                # UI组件库
+│   └── Sansnn-uQRCode/        # 二维码生成
+├── uniCloud-alipay/           # 云服务(与admin端共享)
+│   ├── cloudfunctions/        # 云函数
+│   └── database/              # 数据库初始化
+├── static/                    # 静态资源
+├── manifest.json              # 应用清单配置
+├── pages.json                 # 页面路由配置
+└── package.json               # 项目依赖配置
+```
+
+### 配置说明
+
+#### uni-starter.config.js 应用配置
+
+配置文件路径: `uni-starter.config.js`
+
+该配置文件会在 `App.vue` 中挂载到 `getApp().globalData.config`,用于全局应用配置。
+
+**主要配置项:**
+
+1. **h5 配置**
+   - `url`: 前端网页托管的域名
+   - `openApp`: H5端全局悬浮引导用户下载app的功能(可选)
+     - `openUrl`: 点击悬浮下载栏后打开的网页链接
+     - `appname`: 左侧显示的应用名称
+     - `logo`: 应用的图标
+
+2. **mp 小程序配置**
+   - `weixin.id`: 微信小程序原始id(用于小程序分享)
+
+3. **about 关于应用**
+   - `appName`: 应用名称
+   - `logo`: 应用logo路径
+   - `company`: 公司名称
+   - `slogan`: 应用口号
+   - `download`: 应用下载链接(用于分享和生成二维码)
+   - `version`: 版本号(非app端显示,app端自动获取)
+
+4. **download 下载配置**
+   - `ios`: iOS应用下载链接
+   - `android`: Android应用下载链接
+
+5. **marketId 应用市场**
+   - `ios`: iOS应用市场ID
+   - `android`: Android应用市场ID
+
+6. **ad 广告配置**
+   - `rewardedVideo`: 激励视频广告位ID
+   - 需要在 [uni-ad 后台](https://uniad.dcloud.net.cn/) 创建广告位后获取
+   - 示例: `"rewardedVideo": "1234567890"`
+
+#### uniCloud 配置
+
+1. 使用 HBuilderX 打开项目
+2. 右键点击 `uniCloud` 目录 → 选择"关联云服务空间或项目"
+3. 选择与 admin 端相同的云服务空间(确保共享同一数据库)
+4. 如果 admin 端已上传云函数和初始化数据库,可跳过上传步骤
+
+#### 广告配置
+
+**重要提示**: 本项目核心变现方式为激励视频广告,必须正确配置才能正常运行。
+
+**配置步骤:**
+
+1. **在 uni-ad 后台创建广告位**
+   - 访问 [uni-ad 后台](https://uniad.dcloud.net.cn/)
+   - 选择广告类型: **激励视频广告**
+   - 创建后获取广告位ID (adpid)
+
+2. **配置广告位ID（重要）**
+
+   **配置文件**: `uni-starter.config.js`（项目根目录）
+
+   找到或添加 `ad` 配置节点，将你的广告位ID填入 `rewardedVideo` 字段：
+
+   ```javascript
+   export default {
+     // ...其他配置
+     "ad": {
+       // 将下面的广告位ID替换为你在uni-ad后台创建的实际广告位ID
+       "rewardedVideo": "你的广告位ID"
+     }
+   }
+   ```
+
+3. **技术说明**
+   - 广告工具类: `utils/ad.js`
+   - 自动从 `uni-starter.config.js` 读取广告位ID
+   - 支持通过参数自定义广告位ID
+
+**详细文档**: [uni-ad 广告联盟](https://uniapp.dcloud.net.cn/uni-ad.html)
+
+---
 
 ## admin 端
 
