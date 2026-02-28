@@ -110,6 +110,7 @@ const afterCheckAd = async (data) => {
 }
 
 const crypto = require('crypto');
+const { create } = require('domain');
 exports.main = async (event, context) => {
 	ip = context.CLIENTIP;
 	//event为客户端上传的参数
@@ -127,6 +128,19 @@ exports.main = async (event, context) => {
 		user_id: event.user_id,
 		extra: event.extra,
 	}
+	// 先检查之前是否已经处理过。原始操作 sf-rewarded-video-ad-notify-log 表
+	const logRes = await db.collection('sf-rewarded-video-ad-notify-log').doc(event.trans_id).set({
+		create_time: Date.now()
+	})
+	// 返回结果 updated = 0  代表 add，代表是首次请求
+	if (logRes.updated > 0) {
+		console.log('已经处理过了，不再处理，trans_id：', event.trans_id);
+		return {
+			"isValid": true
+		}
+	}
+
+
 	// 注意::必须验签请求来源
 	const trans_id = event.trans_id;
 	//去uni-config-center通过adpid获取secret
