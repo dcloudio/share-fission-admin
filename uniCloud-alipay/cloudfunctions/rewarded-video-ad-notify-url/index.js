@@ -110,7 +110,6 @@ const afterCheckAd = async (data) => {
 }
 
 const crypto = require('crypto');
-const { create } = require('domain');
 exports.main = async (event, context) => {
 	ip = context.CLIENTIP;
 	//event为客户端上传的参数
