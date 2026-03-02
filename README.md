@@ -575,6 +575,11 @@ const res = await shareFissionCo.action({
 
 ## 附录
 
+### 仓库地址
+
+- [share-fission-client 仓库地址](https://github.com/dcloudio/share-fission-client)
+- [share-fission-admin 仓库地址](https://github.com/dcloudio/share-fission-admin)
+
 ### 相关文档
 
 - [uni-app](https://uniapp.dcloud.net.cn/)
